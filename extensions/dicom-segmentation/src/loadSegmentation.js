@@ -10,6 +10,9 @@ export default async function loadSegmentation(
   referencedDisplaySet,
   studies
 ) {
+  console.log('±±±±±±±±±±±±±segDisplaySet±±±±±±±±±±±±±±±±±')
+  console.log(segDisplaySet, referencedDisplaySet, studies)
+
   const { StudyInstanceUID } = referencedDisplaySet;
 
   // Set here is loading is asynchronous.
@@ -20,14 +23,22 @@ export default async function loadSegmentation(
     segDisplaySet,
     studies
   );
+  console.log('±±±±±±±±±±±segArrayBuffer±±±±±±±±±±±±±±±±±±±')
+  console.log(segArrayBuffer)
 
   const dicomData = dcmjs.data.DicomMessage.readFile(segArrayBuffer);
+  window.dicomData = dicomData
   const dataset = dcmjs.data.DicomMetaDictionary.naturalizeDataset(
     dicomData.dict
   );
-
+  console.log('±±±±±±±±±±±dicomData±±±±±±±±±±±±±±±±±±±')
+  console.log(dicomData)
+  console.log('±±±±±±±±±±±dataset±±±±±±±±±±±±±±±±±±±')
+  console.log(dataset)
   dataset._meta = dcmjs.data.DicomMetaDictionary.namifyDataset(dicomData.meta);
-
+  console.log('±±±±±±±±±±±dataset._meta±±±±±±±±±±±±±±±±±±±')
+  console.log(dataset._meta)
+  window.segDataset = dataset
   const imageIds = _getImageIdsForDisplaySet(
     studies,
     StudyInstanceUID,
@@ -44,14 +55,20 @@ export default async function loadSegmentation(
       segDisplaySet.loadError = true;
       reject(error);
     }
-
+    console.log('±±±±±±±±±±±results±±±±±±±±±±±±±±±±±±±')
+    console.log(results)
+    window.OHIF = OHIF
+    window.dcmjs = dcmjs
     const { labelmapBuffer, segMetadata, segmentsOnFrame } = results;
     const { setters } = cornerstoneTools.getModule('segmentation');
 
     // TODO: Could define a color LUT based on colors in the SEG.
     const labelmapIndex = _getNextLabelmapIndex(imageIds[0]);
     const colorLUTIndex = _makeColorLUTAndGetIndex(segMetadata);
-
+    console.log('±±±±±±±±±±±labelmapIndex±±±±±±±±±±±±±±±±±±±')
+    console.log(labelmapIndex)
+    console.log('±±±±±±±±±±±colorLUTIndex±±±±±±±±±±±±±±±±±±±')
+    console.log(colorLUTIndex)
     setters.labelmap3DByFirstImageId(
       imageIds[0],
       labelmapBuffer,
@@ -61,9 +78,11 @@ export default async function loadSegmentation(
       segmentsOnFrame,
       colorLUTIndex
     );
-
+    console.log('±±±±±±±±±±±setters±±±±±±±±±±±±±±±±±±±')
+    console.log(setters)
     segDisplaySet.labelmapIndex = labelmapIndex;
-
+    console.log('±±±±±±±±±±±labelmapIndex±±±±±±±±±±±±±±±±±±±')
+    console.log(labelmapIndex)
     /*
      * TODO: Improve the way we notify parts of the app that depends on segs to be loaded.
      *
@@ -174,6 +193,7 @@ function _getNextColorLUTIndex() {
 }
 
 function _parseSeg(arrayBuffer, imageIds) {
+
   return dcmjs.adapters.Cornerstone.Segmentation.generateToolState(
     imageIds,
     arrayBuffer,

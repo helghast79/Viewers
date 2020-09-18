@@ -36,6 +36,13 @@ export default function init({
 
   // TODO: MEASUREMENT_COMPLETED (not present in initial implementation)
   const onMeasurementsChanged = (action, event) => {
+    console.log('++++++++++++++++++++++++')
+    console.log(MEASUREMENT_ACTION_MAP)
+    console.log(action)
+    console.log(event)
+
+    console.log(MEASUREMENT_ACTION_MAP[action])
+    console.log('++++++++++-----++++++++++++++')
     return MEASUREMENT_ACTION_MAP[action](event);
   };
   const onMeasurementAdded = onMeasurementsChanged.bind(this, 'added');

@@ -64,3 +64,24 @@
   flex: unset;
   margin-right: 16px;
 }
+.dcmseg-segmentation-panel .tableList .tableListContent .segment-item.selected{
+  background-color: #2b2a2a;
+}
+.dcmseg-segmentation-panel .tableList .tableListContent .segment-item.selected .segment-color-section{
+  color: yellow;
+}
+.dcmseg-segmentation-panel .tableList .tableListContent .segment-item.selected .itemContent{
+  color: yellow;
+}
+.dcmseg-segmentation-panel .tableList .tableListContent .segment-item.selected .segment-color-section .segment-color{
+  /* border: 2px solid black; */
+  box-shadow: white 0px 0px 8px 0px;
+}
+.plus-icon{
+  cursor:pointer;
+  margin-left: 25px;
+  margin-bottom: -3px;
+}
+.plus-icon:hover{
+  color:white;
+}

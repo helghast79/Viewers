@@ -4,6 +4,7 @@ import init from './init.js';
 import toolbarModule from './toolbarModule.js';
 import getSopClassHandlerModule from './getOHIFDicomSegSopClassHandler.js';
 import SegmentationPanel from './components/SegmentationPanel/SegmentationPanel.js';
+import commandsModule from './commandsModule.js';
 
 export default {
   /**
@@ -23,13 +24,48 @@ export default {
   getToolbarModule({ servicesManager }) {
     return toolbarModule;
   },
+  getCommandsModule({ servicesManager }) {
+
+    return commandsModule;
+  },
   getPanelModule({ commandsManager, api, servicesManager }) {
     const { UINotificationService } = servicesManager.services;
+    console.log('.,-.,-.,-.,-.,-.,-.,.,.-,.-.,.,-.-.,')
+    console.log(commandsManager, api, servicesManager)
+
+
+
+
+    document.addEventListener('extensiondicomsegmentationsegloaded', event => {
+      //const enabledElements = cornerstone.getEnabledElements();
+      //const element = enabledElements[0].element;
+
+      // element.addEventListener('cornersontetoolslabelmapmodified', event => {
+      //   event.stopPropagation()
+      //   console.log('blablablablabla', event);
+
+      //   // const module = cornerstoneTools.getModule('segmentation');
+      //   // const activeViewport = viewports[activeIndex];
+      //   // const studyMetadata = studyMetadataManager.get(
+      //   //   activeViewport.StudyInstanceUID
+      //   // );
+      //   // const firstImageId = studyMetadata.getFirstImageId(
+      //   //   activeViewport.displaySetInstanceUID
+      //   // );
+      //   // updateState('brushStackState', module.state.series[firstImageId]);
+
+      // });
+
+    });
+
+
+    window.MeasurementService = servicesManager.services.MeasurementService
 
     const ExtendedSegmentationPanel = props => {
       const { activeContexts } = api.hooks.useAppContext();
 
       const onDisplaySetLoadFailureHandler = error => {
+        console.log('---->----->----> ', error)
         UINotificationService.show({
           title: 'DICOM Segmentation Loader',
           message: error.message,
@@ -39,6 +75,14 @@ export default {
       };
 
       const segmentItemClickHandler = data => {
+        console.log(data)
+        const enabledElements = cornerstone.getEnabledElements()
+        const element = enabledElements[data.activeViewportIndex].element
+        const module = cornerstoneTools.getModule('segmentation');
+        const activeLabelmapIndex = module.getters.labelmaps3D(element).activeLabelmapIndex
+        const labelmap3D = module.getters.labelmaps3D(element).labelmaps3D[activeLabelmapIndex];
+        console.log(labelmap3D.activeSegmentIndex)
+
         commandsManager.runCommand('jumpToImage', data);
         commandsManager.runCommand('jumpToSlice', data);
       };
@@ -83,7 +127,7 @@ export default {
           icon: 'list',
           label: 'Segmentations',
           target: 'segmentation-panel',
-          isDisabled: studies => {
+          isDisabled: false /* studies => {
             if (!studies) {
               return true;
             }
@@ -103,7 +147,7 @@ export default {
             }
 
             return true;
-          },
+          },*/
         },
       ],
       components: [
@@ -116,4 +160,5 @@ export default {
     };
   },
   getSopClassHandlerModule,
+
 };

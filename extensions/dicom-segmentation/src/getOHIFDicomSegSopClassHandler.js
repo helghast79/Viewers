@@ -16,7 +16,7 @@ export default function getSopClassHandlerModule({ servicesManager }) {
     id: 'OHIFDicomSegSopClassHandler',
     type: MODULE_TYPES.SOP_CLASS_HANDLER,
     sopClassUIDs,
-    getDisplaySetFromSeries: function(
+    getDisplaySetFromSeries: function (
       series,
       study,
       dicomWebClient,
@@ -55,11 +55,11 @@ export default function getSopClassHandlerModule({ servicesManager }) {
         SeriesDescription,
       };
 
-      segDisplaySet.getSourceDisplaySet = function(studies) {
+      segDisplaySet.getSourceDisplaySet = function (studies) {
         return getSourceDisplaySet(studies, segDisplaySet);
       };
 
-      segDisplaySet.load = function(referencedDisplaySet, studies) {
+      segDisplaySet.load = function (referencedDisplaySet, studies) {
         return loadSegmentation(segDisplaySet, referencedDisplaySet, studies);
       };
 
