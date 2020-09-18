@@ -5,6 +5,7 @@ import cornerstone from 'cornerstone-core';
 import moment from 'moment';
 import { utils, log } from '@ohif/core';
 import { ScrollableArea, TableList, Icon } from '@ohif/ui';
+import DICOMSegTempCrosshairsTool from '../../tools/DICOMSegTempCrosshairsTool';
 
 import setActiveLabelmap from '../../utils/setActiveLabelMap';
 import refreshViewports from '../../utils/refreshViewports';
@@ -352,7 +353,13 @@ const SegmentationPanel = ({
               'StudyInstanceUID',
               imageId
             );
-            console.log('??? 5')
+
+            DICOMSegTempCrosshairsTool.addCrosshair(
+              element,
+              imageId,
+              segmentNumber
+            );
+
             onSegmentItemClick({
               StudyInstanceUID,
               SOPInstanceUID,

@@ -1,5 +1,6 @@
 import csTools from 'cornerstone-tools';
 import cornerstone from 'cornerstone-core';
+import DICOMSegTempCrosshairsTool from './tools/DICOMSegTempCrosshairsTool';
 
 /**
  *
@@ -22,7 +23,7 @@ export default function init({ servicesManager, configuration = {} }) {
     },
   });
 
-
+  csTools.addTool(DICOMSegTempCrosshairsTool);
 
 
   cornerstone.events.addEventListener(
@@ -31,4 +32,5 @@ export default function init({ servicesManager, configuration = {} }) {
       console.log('00000000000000000000000000000000000000', event)
 
     });
+
 }

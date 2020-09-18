@@ -1,16 +1,17 @@
 import React from 'react';
-
 import init from './init.js';
 import toolbarModule from './toolbarModule.js';
 import getSopClassHandlerModule from './getOHIFDicomSegSopClassHandler.js';
 import SegmentationPanel from './components/SegmentationPanel/SegmentationPanel.js';
 import commandsModule from './commandsModule.js';
+import { version } from '../package.json';
 
 export default {
   /**
    * Only required property. Should be a unique value across all extensions.
    */
   id: 'com.ohif.dicom-segmentation',
+  version,
 
   /**
    *

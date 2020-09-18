@@ -27,6 +27,7 @@ const OHIFDicomRTStructSopClassHandler = {
     const {
       SeriesDate,
       SeriesTime,
+      SeriesNumber,
       SeriesDescription,
       FrameOfReferenceUID,
       SOPInstanceUID,
@@ -53,7 +54,9 @@ const OHIFDicomRTStructSopClassHandler = {
       isLoaded: false,
       SeriesDate,
       SeriesTime,
+      SeriesNumber,
       SeriesDescription,
+      metadata,
     };
 
     if (!metadata.ReferencedSeriesSequence) {
