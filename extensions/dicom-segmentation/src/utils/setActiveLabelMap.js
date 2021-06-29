@@ -18,7 +18,7 @@ export default async function setActiveLabelmap(
   referencedDisplaySet,
   studies,
   displaySet,
-  callback = () => {},
+  callback = () => { },
   onDisplaySetLoadFailure = err => {
     throw new Error(err.message);
   }

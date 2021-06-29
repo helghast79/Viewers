@@ -1,4 +1,4 @@
-/* TODO: Creation tools (future release).
+/* TODO: Creation tools (future release). */
 
 const TOOLBAR_BUTTON_TYPES = {
   COMMAND: 'command',
@@ -6,9 +6,9 @@ const TOOLBAR_BUTTON_TYPES = {
   BUILT_IN: 'builtIn',
 };
 
-*/
 
-const definitions = []; /* TODO: Creation tools (future release). [
+
+const definitions =  /* TODO: Creation tools (future release).*/[
   {
     id: 'SegDropdown',
     label: 'Segmentation',
@@ -29,7 +29,7 @@ const definitions = []; /* TODO: Creation tools (future release). [
         icon: 'sphere',
         //
         type: TOOLBAR_BUTTON_TYPES.SET_TOOL_ACTIVE,
-        commandName: 'setToolActive',
+        commandName: 'doGoofyStuff',//'setToolActive',
         commandOptions: { toolName: 'SphericalBrush' },
       },
       {
@@ -52,7 +52,7 @@ const definitions = []; /* TODO: Creation tools (future release). [
       },
     ],
   },
-]; */
+];
 
 export default {
   definitions,

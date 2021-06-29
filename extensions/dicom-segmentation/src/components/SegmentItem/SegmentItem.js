@@ -26,12 +26,59 @@ const SegmentItem = ({
   color,
   visible = true,
   onVisibilityChange,
+  dialogFunction,
+  relabelSegmentModal,
+  deleteDialogFunction,
+  metadata
 }) => {
   const [isVisible, setIsVisible] = useState(visible);
 
   useEffect(() => {
     setIsVisible(visible);
   }, [visible]);
+
+
+  const getDescription = segmentProps => {
+    const parts = [];
+    if (segmentProps.type) parts.push(segmentProps.type.name)
+    if (segmentProps.subtype) parts.push(segmentProps.subtype.name)
+    if (segmentProps.modifier) parts.push(segmentProps.modifier.name)
+    return parts.join(' - ');
+  }
+
+  const convertMetaToProps = metadata => {
+    const props = {};
+    if (metadata) {
+      if (metadata.SegmentedPropertyCategoryCodeSequence) {
+        props.type = {
+          code: metadata.SegmentedPropertyCategoryCodeSequence.CodeValue,
+          scheme: metadata.SegmentedPropertyCategoryCodeSequence.CodingSchemeDesignator,
+          name: metadata.SegmentedPropertyCategoryCodeSequence.CodeMeaning
+        }
+      }
+      if (metadata.SegmentedPropertyTypeCodeSequence) {
+        props.subtype = {
+          code: metadata.SegmentedPropertyTypeCodeSequence.CodeValue,
+          scheme: metadata.SegmentedPropertyTypeCodeSequence.CodingSchemeDesignator,
+          name: metadata.SegmentedPropertyTypeCodeSequence.CodeMeaning
+        }
+      }
+      if (metadata.SegmentedPropertyTypeModifierCodeSequence) {
+        props.modifier = {
+          code: metadata.SegmentedPropertyTypeModifierCodeSequence.CodeValue,
+          scheme: metadata.SegmentedPropertyTypeModifierCodeSequence.CodingSchemeDesignator,
+          name: metadata.SegmentedPropertyTypeModifierCodeSequence.CodeMeaning
+        }
+      }
+    }
+    return props
+  }
+
+
+
+  const segmentProps = convertMetaToProps(metadata);
+  const description = getDescription(segmentProps);
+
 
   return (
     <div className="dcmseg-segment-item">
@@ -71,26 +118,51 @@ const SegmentItem = ({
               }}
             />
           </div>
-          {false && <div className="segment-info">{'...'}</div>}
-          {false && (
+          {true && (
+            <div className="segment-info">
+              <a data-tip data-for={`SegmentInfoHover${index}`}>
+                <span>{description}</span>
+              </a>
+              <ReactTooltip
+                id={`SegmentInfoHover${index}`}
+                delayShow={150}
+                place="right"
+                border={true}
+                type="light"
+              >
+                {segmentProps.type && (<p><span style={{ color: "#337ab7" }}>Category: </span>{`${segmentProps.type.name} - ${segmentProps.type.code} (${segmentProps.type.scheme})`}</p>)}
+                {segmentProps.subtype && (<p><span style={{ color: "#337ab7" }}>Type:  </span>{`${segmentProps.subtype.name} - ${segmentProps.subtype.code} (${segmentProps.subtype.scheme})`}</p>)}
+                {segmentProps.modifier && (<p><span style={{ color: "#337ab7" }}>Modifier: </span>{`${segmentProps.modifier.name} - ${segmentProps.modifier.code} (${segmentProps.modifier.scheme})`}</p>)}
+              </ReactTooltip>
+            </div>
+          )}
+          {true && (
             <div className="segment-actions">
               <button
                 className="btnAction"
-                onClick={() => console.log('Relabelling...')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  relabelSegmentModal();
+                  //dialogFunction('ok', '', 'test relabel', (n) => { console.log(`relabel ${index}`) })
+                }}
               >
                 <span style={{ marginRight: '4px' }}>
                   <Icon name="edit" width="14px" height="14px" />
                 </span>
                 Relabel
               </button>
+
               <button
                 className="btnAction"
-                onClick={() => console.log('Editing description...')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  deleteDialogFunction();
+                }}
               >
                 <span style={{ marginRight: '4px' }}>
-                  <Icon name="edit" width="14px" height="14px" />
+                  <Icon name="trash" width="14px" height="14px" />
                 </span>
-                Description
+                Delete
               </button>
             </div>
           )}
@@ -106,11 +178,12 @@ SegmentItem.propTypes = {
   onClick: PropTypes.func,
   itemClass: PropTypes.string,
   color: PropTypes.array.isRequired,
+  metadata: PropTypes.object,
 };
 
 SegmentItem.defaultProps = {
   itemClass: '',
-  onClick: () => {},
+  onClick: () => { },
 };
 
 export default SegmentItem;

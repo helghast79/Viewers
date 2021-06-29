@@ -1,0 +1,12 @@
+
+.simpleDialog .header .title{
+  font-size: 22px;
+}
+.simpleDialog .content{
+  padding: 25px 50px;
+  color: var(--text-secondary-color);
+  font-size: 15px;
+}
+.simpleDialog .footer{
+  margin-top: 0;
+}

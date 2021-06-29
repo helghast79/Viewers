@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Range } from '@ohif/ui';
+import { Range, Label, TextInput } from '@ohif/ui';
 
 import './SegmentationSettings.css';
 
 const SegmentationSettings = ({ configuration, onBack, onChange, disabledFields = [] }) => {
+
   const [state, setState] = useState({
     renderFill: configuration.renderFill,
     renderOutline: configuration.renderOutline,
@@ -13,7 +14,8 @@ const SegmentationSettings = ({ configuration, onBack, onChange, disabledFields 
     outlineAlpha: configuration.outlineAlpha,
     outlineWidth: configuration.outlineWidth,
     fillAlphaInactive: configuration.fillAlphaInactive,
-    outlineAlphaInactive: configuration.outlineAlphaInactive
+    outlineAlphaInactive: configuration.outlineAlphaInactive,
+    uploadSegmentationsUrl: configuration.uploadSegmentationsUrl,
   });
 
   useEffect(() => {
@@ -133,6 +135,31 @@ const SegmentationSettings = ({ configuration, onBack, onChange, disabledFields 
           )}
         </div>
       )}
+
+      <div
+        className="settings-group"
+        style={{ marginBottom: 25 }}
+      >
+        <CustomLabel text="Server Config" ></CustomLabel>
+
+        <TextInput
+          type="text"
+          value={state.uploadSegmentationsUrl}
+          label="Upload URL"
+          onChange={event => save('uploadSegmentationsUrl', event.target.value)}
+        ></TextInput>
+
+      </div>
+    </div>
+  );
+};
+
+const CustomLabel = ({ text }) => {
+  return (
+    <div className="custom-check">
+      <label>
+        <span>{text}</span>
+      </label>
     </div>
   );
 };
@@ -174,6 +201,7 @@ SegmentationSettings.propTypes = {
     outlineWidth: PropTypes.number.isRequired,
     fillAlphaInactive: PropTypes.number.isRequired,
     outlineAlphaInactive: PropTypes.number.isRequired,
+    uploadSegmentationsUrl: PropTypes.string.isRequired
   }).isRequired,
   onBack: PropTypes.func.isRequired,
   onChange: PropTypes.func.isRequired,

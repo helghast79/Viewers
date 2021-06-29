@@ -29,11 +29,12 @@
 
 .dcmseg-segment-item .segment-actions {
   margin-left: -1px;
-  background-color: var(--ui-gray-darker);
-  height: 0;
+  /* background-color: var(--ui-gray-darker); */
+  /* height: 0; */
+  margin-top: 9px;
   overflow: hidden;
   transition: all 0.3s ease;
-  visibility: hidden;
+  /* visibility: hidden; */
   padding-left: 14px;
 }
 
@@ -42,9 +43,13 @@
   border: none;
   color: var(--default-color);
   cursor: pointer;
-  line-height: 35px;
-  height: 35px;
+  /* line-height: 35px;
+  height: 35px; */
   transition: all 0.3s ease;
+}
+
+.dcmseg-segment-item .segment-actions .btnAction:focus {
+  outline: none;
 }
 
 .dcmseg-segment-item .segment-actions .btnAction:hover, .dcmseg-segment-item .segment-actions .btnAction:active {
@@ -55,7 +60,7 @@
   margin-right: 4px;
 }
 
-.dcmseg-segment-item .segment-label {
+.dcmseg-segment-item .segment-label, .dcmseg-segment-item .segment-info, .dcmseg-segment-item .segment-actions {
   display: flex;
   justify-content: space-between;
   padding-right: 20px;
