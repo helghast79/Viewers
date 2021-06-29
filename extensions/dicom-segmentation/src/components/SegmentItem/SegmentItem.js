@@ -24,7 +24,7 @@ const SegmentItem = ({
   onClick,
   itemClass,
   color,
-  visible = true,
+  visible,
   onVisibilityChange,
   dialogFunction,
   relabelSegmentModal,
@@ -38,47 +38,55 @@ const SegmentItem = ({
   }, [visible]);
 
 
-  const getDescription = segmentProps => {
-    const parts = [];
-    if (segmentProps.type) parts.push(segmentProps.type.name)
-    if (segmentProps.subtype) parts.push(segmentProps.subtype.name)
-    if (segmentProps.modifier) parts.push(segmentProps.modifier.name)
-    return parts.join(' - ');
-  }
+  // const getDescription = segmentProps => {
+  //   const parts = [];
+  //   if (segmentProps.type) parts.push(segmentProps.type.name)
+  //   if (segmentProps.subtype) parts.push(segmentProps.subtype.name)
+  //   if (segmentProps.modifier) parts.push(segmentProps.modifier.name)
+  //   return parts.join(' - ');
+  // }
 
-  const convertMetaToProps = metadata => {
-    const props = {};
-    if (metadata) {
-      if (metadata.SegmentedPropertyCategoryCodeSequence) {
-        props.type = {
-          code: metadata.SegmentedPropertyCategoryCodeSequence.CodeValue,
-          scheme: metadata.SegmentedPropertyCategoryCodeSequence.CodingSchemeDesignator,
-          name: metadata.SegmentedPropertyCategoryCodeSequence.CodeMeaning
-        }
-      }
-      if (metadata.SegmentedPropertyTypeCodeSequence) {
-        props.subtype = {
-          code: metadata.SegmentedPropertyTypeCodeSequence.CodeValue,
-          scheme: metadata.SegmentedPropertyTypeCodeSequence.CodingSchemeDesignator,
-          name: metadata.SegmentedPropertyTypeCodeSequence.CodeMeaning
-        }
-      }
-      if (metadata.SegmentedPropertyTypeModifierCodeSequence) {
-        props.modifier = {
-          code: metadata.SegmentedPropertyTypeModifierCodeSequence.CodeValue,
-          scheme: metadata.SegmentedPropertyTypeModifierCodeSequence.CodingSchemeDesignator,
-          name: metadata.SegmentedPropertyTypeModifierCodeSequence.CodeMeaning
-        }
-      }
-    }
-    return props
-  }
+  // const convertMetaToProps = metadata => {
+  //   const props = {};
+  //   if (metadata) {
+  //     if (metadata.SegmentedPropertyCategoryCodeSequence) {
+  //       props.type = {
+  //         code: metadata.SegmentedPropertyCategoryCodeSequence.CodeValue,
+  //         scheme: metadata.SegmentedPropertyCategoryCodeSequence.CodingSchemeDesignator,
+  //         name: metadata.SegmentedPropertyCategoryCodeSequence.CodeMeaning
+  //       }
+  //     }
+  //     if (metadata.SegmentedPropertyTypeCodeSequence) {
+  //       props.subtype = {
+  //         code: metadata.SegmentedPropertyTypeCodeSequence.CodeValue,
+  //         scheme: metadata.SegmentedPropertyTypeCodeSequence.CodingSchemeDesignator,
+  //         name: metadata.SegmentedPropertyTypeCodeSequence.CodeMeaning
+  //       }
+  //     }
+  //     if (metadata.SegmentedPropertyTypeModifierCodeSequence) {
+  //       props.modifier = {
+  //         code: metadata.SegmentedPropertyTypeModifierCodeSequence.CodeValue,
+  //         scheme: metadata.SegmentedPropertyTypeModifierCodeSequence.CodingSchemeDesignator,
+  //         name: metadata.SegmentedPropertyTypeModifierCodeSequence.CodeMeaning
+  //       }
+  //     }
+  //   }
+  //   return props
+  // }
 
 
 
-  const segmentProps = convertMetaToProps(metadata);
-  const description = getDescription(segmentProps);
+  // const segmentProps = convertMetaToProps(metadata);
+  // const description = getDescription(segmentProps);
 
+  const onClickHandler = () => onClick(index);
+
+  const onVisibilityChangeHandler = event => {
+    event.stopPropagation();
+    const newVisibility = !isVisible;
+    setIsVisible(newVisibility);
+    onVisibilityChange(newVisibility, index);
+  };
 
   return (
     <div className="dcmseg-segment-item">
@@ -89,7 +97,7 @@ const SegmentItem = ({
         itemClass={itemClass}
         itemMeta={<ColoredCircle color={color} />}
         itemMetaClass="segment-color-section"
-        onItemClick={onClick}
+        onItemClick={onClickHandler}
       >
         <div>
           <div className="segment-label" style={{ marginBottom: 4 }}>
@@ -110,12 +118,7 @@ const SegmentItem = ({
               name={isVisible ? 'eye' : 'eye-closed'}
               width="20px"
               height="20px"
-              onClick={event => {
-                event.stopPropagation();
-                const newVisibility = !isVisible;
-                setIsVisible(newVisibility);
-                onVisibilityChange(newVisibility);
-              }}
+              onClick={onVisibilityChangeHandler}
             />
           </div>
           {true && (

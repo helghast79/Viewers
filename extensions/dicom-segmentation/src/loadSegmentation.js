@@ -48,69 +48,102 @@ export default async function loadSegmentation(
   return new Promise((resolve, reject) => {
     let results;
 
-    try {
-      results = _parseSeg(segArrayBuffer, imageIds);
-    } catch (error) {
-      segDisplaySet.isLoaded = false;
-      segDisplaySet.loadError = true;
-      reject(error);
-    }
-    console.log('±±±±±±±±±±±results±±±±±±±±±±±±±±±±±±±')
-    console.log(results)
-    window.OHIF = OHIF
-    window.dcmjs = dcmjs
-    const { labelmapBuffer, segMetadata, segmentsOnFrame } = results;
-    //add SOPInstanceUID to segMetadata so that we can use it later to overwrite this dicom-seg when uploading to pacs
-    segMetadata.SOPInstanceUID = dataset.SOPInstanceUID;
-    segMetadata.SeriesInstanceUID = dataset.SeriesInstanceUID;
-    segMetadata.SeriesDescription = dataset.SeriesDescription
+    // try {
+    //   results = _parseSeg(segArrayBuffer, imageIds);
+    // } catch (error) {
+    //   segDisplaySet.isLoaded = false;
+    //   segDisplaySet.loadError = true;
+    //   reject(error);
+    // }
+    // console.log('±±±±±±±±±±±results±±±±±±±±±±±±±±±±±±±')
+    // console.log(results)
+    // window.OHIF = OHIF
+    // window.dcmjs = dcmjs
+    // const { labelmapBuffer, segMetadata, segmentsOnFrame } = results;
+    // //add SOPInstanceUID to segMetadata so that we can use it later to overwrite this dicom-seg when uploading to pacs
+    // segMetadata.SOPInstanceUID = dataset.SOPInstanceUID;
+    // segMetadata.SeriesInstanceUID = dataset.SeriesInstanceUID;
+    // segMetadata.SeriesDescription = dataset.SeriesDescription
 
-    const { setters } = cornerstoneTools.getModule('segmentation');
+    // const { setters } = cornerstoneTools.getModule('segmentation');
 
-    // TODO: Could define a color LUT based on colors in the SEG.
-    const labelmapIndex = _getNextLabelmapIndex(imageIds[0]);
-    const colorLUTIndex = _makeColorLUTAndGetIndex(segMetadata);
-    console.log('±±±±±±±±±±±labelmapIndex±±±±±±±±±±±±±±±±±±±')
-    console.log(labelmapIndex)
-    console.log('±±±±±±±±±±±colorLUTIndex±±±±±±±±±±±±±±±±±±±')
-    console.log(colorLUTIndex)
-    setters.labelmap3DByFirstImageId(
-      imageIds[0],
-      labelmapBuffer,
-      labelmapIndex,
-      segMetadata,
-      imageIds.length,
-      segmentsOnFrame,
-      colorLUTIndex
-    );
-    console.log('±±±±±±±±±±±setters±±±±±±±±±±±±±±±±±±±')
-    console.log(setters)
-    segDisplaySet.labelmapIndex = labelmapIndex;
-    console.log('±±±±±±±±±±±labelmapIndex±±±±±±±±±±±±±±±±±±±')
-    console.log(labelmapIndex)
-    /*
-     * TODO: Improve the way we notify parts of the app that depends on segs to be loaded.
-     *
-     * Currently we are using a non-ideal implementation through a custom event to notify the segmentation panel
-     * or other components that could rely on loaded segmentations that
-     * the segments were loaded so that e.g. when the user opens the panel
-     * before the segments are fully loaded, the panel can subscribe to this custom event
-     * and update itself with the new segments.
-     *
-     * This limitation is due to the fact that the cs segmentation module is an object (which will be
-     * updated after the segments are loaded) that React its not aware of its changes
-     * because the module object its not passed in to the panel component as prop but accessed externally.
-     *
-     * Improving this event approach to something reactive that can be tracked inside the react lifecycle,
-     * allows us to easily watch the module or the segmentations loading process in any other component
-     * without subscribing to external events.
-     */
-    console.log('Segmentation loaded.');
-    const event = new CustomEvent('extensiondicomsegmentationsegloaded');
-    document.dispatchEvent(event);
+    // // TODO: Could define a color LUT based on colors in the SEG.
+    // const labelmapIndex = _getNextLabelmapIndex(imageIds[0]);
+    // const colorLUTIndex = _makeColorLUTAndGetIndex(segMetadata);
+    // console.log('±±±±±±±±±±±labelmapIndex±±±±±±±±±±±±±±±±±±±')
+    // console.log(labelmapIndex)
+    // console.log('±±±±±±±±±±±colorLUTIndex±±±±±±±±±±±±±±±±±±±')
+    // console.log(colorLUTIndex)
+    // setters.labelmap3DByFirstImageId(
+    //   imageIds[0],
+    //   labelmapBuffer,
+    //   labelmapIndex,
+    //   segMetadata,
+    //   imageIds.length,
+    //   segmentsOnFrame,
+    //   colorLUTIndex
+    // );
+    // console.log('±±±±±±±±±±±setters±±±±±±±±±±±±±±±±±±±')
+    // console.log(setters)
+    // segDisplaySet.labelmapIndex = labelmapIndex;
+    // console.log('±±±±±±±±±±±labelmapIndex±±±±±±±±±±±±±±±±±±±')
+    // console.log(labelmapIndex)
+    // /*
+    //  * TODO: Improve the way we notify parts of the app that depends on segs to be loaded.
+    //  *
+    //  * Currently we are using a non-ideal implementation through a custom event to notify the segmentation panel
+    //  * or other components that could rely on loaded segmentations that
+    //  * the segments were loaded so that e.g. when the user opens the panel
+    //  * before the segments are fully loaded, the panel can subscribe to this custom event
+    //  * and update itself with the new segments.
+    //  *
+    //  * This limitation is due to the fact that the cs segmentation module is an object (which will be
+    //  * updated after the segments are loaded) that React its not aware of its changes
+    //  * because the module object its not passed in to the panel component as prop but accessed externally.
+    //  *
+    //  * Improving this event approach to something reactive that can be tracked inside the react lifecycle,
+    //  * allows us to easily watch the module or the segmentations loading process in any other component
+    //  * without subscribing to external events.
+    //  */
+    // console.log('Segmentation loaded.');
+    // const event = new CustomEvent('extensiondicomsegmentationsegloaded');
+    // document.dispatchEvent(event);
 
-    resolve(labelmapIndex);
+    // resolve(labelmapIndex);
   });
+  /**
+   * Cache each labelmap segments.
+   * This data is used to determine the active label map when a given segment is activated/clicked.
+   */
+  segDisplaySet.labelmapSegments[labelmapIndex] = labelmapSegments.length
+    ? Array.from(
+      new Set(labelmapSegments.filter(a => !!a).reduce((a, b) => a.concat(b)))
+    )
+    : [];
+  segDisplaySet.labelmapIndex = labelmapIndex;
+
+  /*
+   * TODO: Improve the way we notify parts of the app that depends on segs to be loaded.
+   *
+   * Currently we are using a non-ideal implementation through a custom event to notify the segmentation panel
+   * or other components that could rely on loaded segmentations that
+   * the segments were loaded so that e.g. when the user opens the panel
+   * before the segments are fully loaded, the panel can subscribe to this custom event
+   * and update itself with the new segments.
+   *
+   * This limitation is due to the fact that the cs segmentation module is an object (which will be
+   * updated after the segments are loaded) that React its not aware of its changes
+   * because the module object its not passed in to the panel component as prop but accessed externally.
+   *
+   * Improving this event approach to something reactive that can be tracked inside the react lifecycle,
+   * allows us to easily watch the module or the segmentations loading process in any other component
+   * without subscribing to external events.
+   */
+  // console.log('Segmentation loaded.');
+  // const event = new CustomEvent('extensiondicomsegmentationsegloaded');
+  // document.dispatchEvent(event);
+
+  return labelmapIndex;
 }
 
 function _getNextLabelmapIndex(firstImageId) {

@@ -135,7 +135,7 @@ export default {
       const { activeContexts } = api.hooks.useAppContext();
 
       const onDisplaySetLoadFailureHandler = error => {
-        console.log('---->----->----> ', error)
+        LoggerService.error({ error, message: error.message });
         UINotificationService.show({
           title: 'DICOM Segmentation Loader',
           message: error.message,
