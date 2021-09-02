@@ -1,51 +1,25 @@
-
-// let oldXHROpen = window.XMLHttpRequest.prototype.open;
-
-// window.XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
-
-//   url = url.replace(/&StudyDate=[0-9\-]*/ig, '')
-
-//   return oldXHROpen.apply(this, arguments);
-// }
-
-
 window.config = {
-
-  //specific ohif config for clinity
-  segmentationConfig: {
-    uploadSegmentationsUrl: 'http://localhost:8001/resources/upload-dicom-seg',
-  },
-
-  // CONFIG =======================================================================
+  // default: '/'
   routerBasename: '/',
-  //extensions: [OHIFExtDicomMicroscopy],
+  extensions: [],
   showStudyList: true,
-  //studyListDateFilterNumDays: 10,
-  //defaultStartDate: '01/01/2001',
+  filterQueryParam: false,
+  disableServersCache: false,
   servers: {
-
     dicomWeb: [
       {
-        name: 'Orthanc',
-        wadoUriRoot: `/wado`,
-        qidoRoot: `/dicom-web`,
-        wadoRoot: `/dicom-web`,
+        name: 'DCM4CHEE',
+        wadoUriRoot: 'https://server.dcmjs.org/dcm4chee-arc/aets/DCM4CHEE/wado',
+        qidoRoot: 'https://server.dcmjs.org/dcm4chee-arc/aets/DCM4CHEE/rs',
+        wadoRoot: 'https://server.dcmjs.org/dcm4chee-arc/aets/DCM4CHEE/rs',
         qidoSupportsIncludeField: true,
         imageRendering: 'wadors',
         thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+        supportsFuzzyMatching: true,
       },
     ],
   },
-  // Extensions should be able to suggest default values for these?
-  extensions: [
-    //'microscopy',
-    //'html',
-    //'OHIFExtDicomMicroscopy',
-    // OHIFVTKExtension,
-    //OHIFExtDicomHtml,
-    // OHIFDicomMicroscopyExtension,
-    // OHIFDicomPDFExtension,
-  ],
   // Extensions should be able to suggest default values for these?
   // Or we can require that these be explicitly set
   hotkeys: [

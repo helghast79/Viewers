@@ -1,25 +1,51 @@
+
+// let oldXHROpen = window.XMLHttpRequest.prototype.open;
+
+// window.XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+
+//   url = url.replace(/&StudyDate=[0-9\-]*/ig, '')
+
+//   return oldXHROpen.apply(this, arguments);
+// }
+
+
 window.config = {
-  // default: '/'
+
+  //specific ohif config for clinity
+  segmentationConfig: {
+    uploadSegmentationsUrl: window.uploadSegmentationUrl || ''//'http://localhost:8001/resources/upload-dicom-seg',
+  },
+
+  // CONFIG =======================================================================
   routerBasename: '/',
-  extensions: [],
+  //extensions: [OHIFExtDicomMicroscopy],
   showStudyList: true,
-  filterQueryParam: false,
-  disableServersCache: false,
+  //studyListDateFilterNumDays: 10,
+  //defaultStartDate: '01/01/2001',
   servers: {
+
     dicomWeb: [
       {
-        name: 'DCM4CHEE',
-        wadoUriRoot: 'https://server.dcmjs.org/dcm4chee-arc/aets/DCM4CHEE/wado',
-        qidoRoot: 'https://server.dcmjs.org/dcm4chee-arc/aets/DCM4CHEE/rs',
-        wadoRoot: 'https://server.dcmjs.org/dcm4chee-arc/aets/DCM4CHEE/rs',
+        name: 'Orthanc',
+        wadoUriRoot: `/api/pacs/${window.pacsName}/wado`,
+        qidoRoot: `/api/pacs/${window.pacsName}/dicom-web`,
+        wadoRoot: `/api/pacs/${window.pacsName}/dicom-web`,
         qidoSupportsIncludeField: true,
         imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
-        enableStudyLazyLoad: true,
-        supportsFuzzyMatching: true,
+        thumbnailRendering: 'wadouri',
       },
     ],
   },
+  // Extensions should be able to suggest default values for these?
+  extensions: [
+    //'microscopy',
+    //'html',
+    //'OHIFExtDicomMicroscopy',
+    // OHIFVTKExtension,
+    //OHIFExtDicomHtml,
+    // OHIFDicomMicroscopyExtension,
+    // OHIFDicomPDFExtension,
+  ],
   // Extensions should be able to suggest default values for these?
   // Or we can require that these be explicitly set
   hotkeys: [
