@@ -142,7 +142,7 @@ class ViewerMain extends Component {
     if (displaySet.isDerived) {
       const { Modality } = displaySet;
       if (Modality === 'SEG' && servicesManager) {
-        const {LoggerService, UINotificationService} = servicesManager.services;
+        const { LoggerService, UINotificationService } = servicesManager.services;
         const onDisplaySetLoadFailureHandler = error => {
           LoggerService.error({ error, message: error.message });
           UINotificationService.show({
@@ -152,8 +152,12 @@ class ViewerMain extends Component {
             autoClose: true,
           });
         };
-
-        const {referencedDisplaySet} = displaySet.getSourceDisplaySet(
+        console.log('zzzzzzzzzzzz', displaySet.getSourceDisplaySet(
+          this.props.studies,
+          true,
+          onDisplaySetLoadFailureHandler
+        ))
+        const { referencedDisplaySet } = displaySet.getSourceDisplaySet(
           this.props.studies,
           true,
           onDisplaySetLoadFailureHandler

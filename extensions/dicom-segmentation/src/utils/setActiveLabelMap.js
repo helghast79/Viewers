@@ -26,17 +26,19 @@ export default async function setActiveLabelmap(
   const studyMetadata = studyMetadataManager.get(
     referencedDisplaySet.StudyInstanceUID
   );
+  console.log('------>', studyMetadata)
   const firstImageId = studyMetadata.getFirstImageId(
     referencedDisplaySet.displaySetInstanceUID
   );
-
+  console.log('------>', firstImageId)
   let { state } = cornerstoneTools.getModule('segmentation');
 
   let brushStackState = state.series[firstImageId];
+  console.log('------>', brushStackState)
   const activeLabelmapIndex = brushStackState
     ? brushStackState.activeLabelmapIndex
     : undefined;
-
+  console.log('------>', activeLabelmapIndex)
   if (displaySet.labelmapIndex === activeLabelmapIndex) {
     log.warn(`${activeLabelmapIndex} is already the active labelmap`);
     return displaySet.labelmapIndex;
@@ -56,9 +58,9 @@ export default async function setActiveLabelmap(
   }
 
   // This might have just been created, so need to use the non-cached value.
-  state = cornerstoneTools.getModule('segmentation').state;
-  brushStackState = state.series[firstImageId];
-  brushStackState.activeLabelmapIndex = displaySet.labelmapIndex;
+  //state = cornerstoneTools.getModule('segmentation').state;
+  //brushStackState = state.series[firstImageId];
+  //brushStackState.activeLabelmapIndex = displaySet.labelmapIndex;
 
   refreshViewports();
   callback();

@@ -225,7 +225,7 @@ class Viewer extends Component {
     if (studies !== prevProps.studies ||
       activeViewportIndex !== prevProps.activeViewportIndex ||
       activeDisplaySetInstanceUID !== prevActiveDisplaySetInstanceUID
-      ) {
+    ) {
 
       this.setState({
         thumbnails: _mapStudiesToThumbnails(studies, activeDisplaySetInstanceUID),
@@ -449,7 +449,7 @@ const _checkForSeriesInconsistencesWarnings = async function (displaySet, studie
     if (displaySet.missingFrames &&
       (!displaySet.reconstructionIssues ||
         (displaySet.reconstructionIssues && !displaySet.reconstructionIssues.find(warn => warn === ReconstructionIssues.DATASET_4D)))) {
-          inconsistencyWarnings.push('The datasets is missing frames: ' + displaySet.missingFrames + '.');
+      inconsistencyWarnings.push('The datasets is missing frames: ' + displaySet.missingFrames + '.');
     }
   } else {
     const segMetadata = displaySet.metadata;
@@ -492,7 +492,7 @@ const _checkForSeriesInconsistencesWarnings = async function (displaySet, studie
         if (inconsistencyWarnings.length === 0) {
           const warningMessage = 'The segmentation ' +
             'has frames out of plane respect to the source images.';
-            inconsistencyWarnings.push(warningMessage);
+          inconsistencyWarnings.push(warningMessage);
         }
         continue;
       }
@@ -503,11 +503,11 @@ const _checkForSeriesInconsistencesWarnings = async function (displaySet, studie
 
       const imageId = imageIds.find(imageId => {
         const sopCommonModule = cornerstone.metaData.get(
-            "sopCommonModule",
-            imageId
+          "sopCommonModule",
+          imageId
         );
         if (!sopCommonModule) {
-            return;
+          return;
         }
 
         return sopCommonModule.sopInstanceUID === ReferencedSOPInstanceUID;
@@ -528,7 +528,7 @@ const _checkForSeriesInconsistencesWarnings = async function (displaySet, studie
         const warningMessage = 'The segmentation ' +
           'has frames with different geometry ' +
           'dimensions (Rows and Columns) respect to the source images.';
-          inconsistencyWarnings.push(warningMessage);
+        inconsistencyWarnings.push(warningMessage);
         break;
       }
     }
@@ -536,7 +536,7 @@ const _checkForSeriesInconsistencesWarnings = async function (displaySet, studie
     if (inconsistencyWarnings.length !== 0) {
       const warningMessage = 'The segmentation format is not supported yet. ' +
         'The segmentation data (segments) could not be loaded.';
-        inconsistencyWarnings.push(warningMessage);
+      inconsistencyWarnings.push(warningMessage);
     }
   }
 
@@ -562,7 +562,7 @@ const _checkForSeriesInconsistencesWarnings = async function (displaySet, studie
  * @param {string} activeDisplaySetInstanceUID
  * @returns {boolean} is active.
  */
- const _isDisplaySetActive = function(displaySet, studies, activeDisplaySetInstanceUID) {
+const _isDisplaySetActive = function (displaySet, studies, activeDisplaySetInstanceUID) {
   let active = false;
 
   const {
@@ -575,17 +575,17 @@ const _checkForSeriesInconsistencesWarnings = async function (displaySet, studie
     displaySet.Modality !== 'RTSTRUCT' &&
     displaySet.Modality !== 'RTDOSE') {
     active = activeDisplaySetInstanceUID === displaySetInstanceUID;
-  } else if (displaySet.getSourceDisplaySet){
+  } else if (displaySet.getSourceDisplaySet) {
     if (displaySet.Modality === 'SEG') {
       const { referencedDisplaySet } = displaySet.getSourceDisplaySet(studies, false);
       active = referencedDisplaySet ?
         activeDisplaySetInstanceUID === referencedDisplaySet.displaySetInstanceUID :
-          false;
+        false;
     } else {
       const referencedDisplaySet = displaySet.getSourceDisplaySet(studies, false);
       active = referencedDisplaySet ?
         activeDisplaySetInstanceUID === referencedDisplaySet.displaySetInstanceUID :
-          false;
+        false;
     }
   }
 
@@ -602,7 +602,7 @@ const _checkForSeriesInconsistencesWarnings = async function (displaySet, studie
  * @param {Study[]} studies
  * @param {string} activeDisplaySetInstanceUID
  */
-const _mapStudiesToThumbnails = function(studies, activeDisplaySetInstanceUID) {
+const _mapStudiesToThumbnails = function (studies, activeDisplaySetInstanceUID) {
   return studies.map(study => {
     const { StudyInstanceUID } = study;
     const thumbnails = study.displaySets.map(displaySet => {

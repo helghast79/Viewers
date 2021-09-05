@@ -34,3 +34,5 @@ screenshots/
 
 # Locize settings
 .locize
+
+*js.map

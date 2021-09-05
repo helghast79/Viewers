@@ -153,9 +153,36 @@ const SegmentationPanel = ({
     };
   }, [
     activeIndex,
+    updateSegmentationComboBox,
     viewports,
     state.brushStackState
   ]);
+
+
+
+
+  const updateSegmentationComboBox = e => {
+    const index = e.detail.activatedLabelmapIndex;
+    if (index !== -1) {
+      setState(state => ({ ...state, selectedSegmentation: index }));
+    } else {
+      cleanSegmentationComboBox();
+    }
+  };
+
+  const cleanSegmentationComboBox = () => {
+    setState(state => ({
+      ...state,
+      segmentsHidden: [],
+      segmentNumbers: [],
+      labelMapList: [],
+      segmentList: [],
+      isDisabled: true,
+      selectedSegmentation: -1,
+    }));
+  };
+
+
 
   const refreshSegmentations = useCallback(() => {
     const module = cornerstoneTools.getModule('segmentation');
@@ -237,10 +264,15 @@ const SegmentationPanel = ({
         activeViewport.SeriesInstanceUID
       );
 
+      const filteredReferencedSegDisplaysets = referencedSegDisplaysets.filter(
+        segDisplay => segDisplay.loadError !== true
+      );
+
+
       let labelmapList = [];
 
       //get labelMapList from referecedDisplaySets
-      labelmapList = referencedSegDisplaysets.map((displaySet, index) => {
+      labelmapList = filteredReferencedSegDisplaysets.map((displaySet, index) => {
 
         const { labelmapIndex, SeriesDate, SeriesTime } = displaySet;
 
@@ -251,7 +283,8 @@ const SegmentationPanel = ({
           labelmapIndex === brushStackState.activeLabelmapIndex;
         const displayDate = date.format('ddd, MMM Do YYYY');
         const displayTime = date.format('h:mm:ss a');
-        const displayDescription = brushStackState.labelmaps3D[labelmapIndex].metadata.SeriesDescription; //displaySet.SeriesDescription;
+
+        const displayDescription = displaySet.SeriesDescription //brushStackState.labelmaps3D[labelmapIndex].metadata.SeriesDescription; //displaySet.SeriesDescription;
 
         return {
           value: labelmapIndex,
@@ -272,9 +305,11 @@ const SegmentationPanel = ({
       });
 
 
+
+
       //other labelMaps are user created and only exist in brushStackState
       brushStackState.labelmaps3D.forEach((labelMap3D, i) => {
-        if (i < referencedSegDisplaysets.length) {
+        if (i < filteredReferencedSegDisplaysets.length) {
           return true;
         }
 

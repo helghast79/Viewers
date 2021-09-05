@@ -85,7 +85,23 @@ export default async function loadSegmentation(
     );
     console.log('±±±±±±±±±±±setters±±±±±±±±±±±±±±±±±±±')
     console.log(setters)
+
+    console.log('segDisplaySet - before new ...')
+    console.log(segDisplaySet)
+
+    /**
+    * Cache each labelmap segments.
+    * This data is used to determine the active label map when a given segment is activated/clicked.
+    */
+    segDisplaySet.labelmapSegments[labelmapIndex] = labelmapSegments.length
+      ? Array.from(
+        new Set(labelmapSegments.filter(a => !!a).reduce((a, b) => a.concat(b)))
+      )
+      : [];
     segDisplaySet.labelmapIndex = labelmapIndex;
+
+
+
     console.log('±±±±±±±±±±±labelmapIndex±±±±±±±±±±±±±±±±±±±')
     console.log(labelmapIndex)
     /*
@@ -105,8 +121,29 @@ export default async function loadSegmentation(
      * allows us to easily watch the module or the segmentations loading process in any other component
      * without subscribing to external events.
      */
+
+    // console.log('Segmentation loaded.');
+    // const event = new CustomEvent('extensiondicomsegmentationsegloaded');
+    // document.dispatchEvent(event);
+
+
+
+
+
+
+
+
     console.log('Segmentation loaded.');
-    const event = new CustomEvent('extensiondicomsegmentationsegloaded');
+    const event = new CustomEvent('extensiondicomsegmentationsegloaded', {
+      detail: {
+        imageIds,
+        segDisplaySet,
+        labelmapBuffer,
+        segMetadata,
+        segmentsOnFrame,
+        labelmapSegments,
+      },
+    });
     document.dispatchEvent(event);
 
     resolve(labelmapIndex);
