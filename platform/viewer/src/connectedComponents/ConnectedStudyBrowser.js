@@ -50,7 +50,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
       if (displaySet.isDerived) {
         const { Modality } = displaySet;
         if (Modality === 'SEG' && servicesManager) {
-          const {LoggerService, UINotificationService} = servicesManager.services;
+          const { LoggerService, UINotificationService } = servicesManager.services;
           const onDisplaySetLoadFailureHandler = error => {
             LoggerService.error({ error, message: error.message });
             UINotificationService.show({
@@ -61,7 +61,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
             });
           };
 
-          const {referencedDisplaySet, activatedLabelmapPromise} = displaySet.getSourceDisplaySet(
+          const { referencedDisplaySet, activatedLabelmapPromise } = displaySet.getSourceDisplaySet(
             ownProps.studyMetadata,
             true,
             onDisplaySetLoadFailureHandler
@@ -70,7 +70,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
           activatedLabelmapPromise.then((activatedLabelmapIndex) => {
             const selectionFired = new CustomEvent("extensiondicomsegmentationsegselected", {
-              "detail": {"activatedLabelmapIndex":activatedLabelmapIndex}
+              "detail": { "activatedLabelmapIndex": activatedLabelmapIndex }
             });
             document.dispatchEvent(selectionFired);
           });

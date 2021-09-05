@@ -20,7 +20,7 @@ export default async function setActiveLabelmap(
   displaySet,
   callback = () => { },
   onDisplaySetLoadFailure = err => {
-    console.error(err.message);
+    throw new Error(err.message);
   }
 ) {
   const studyMetadata = studyMetadataManager.get(
@@ -58,11 +58,6 @@ export default async function setActiveLabelmap(
       return -1;
     }
   }
-
-  labelmapIndex =
-    displaySet.hasOverlapping === true
-      ? displaySet.originLabelMapIndex
-      : displaySet.labelmapIndex;
 
   // This might have just been created, so need to use the non-cached value.
   state = cornerstoneTools.getModule('segmentation').state;

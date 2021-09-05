@@ -81,18 +81,19 @@ export default {
 
 
 
-    const callRelabelSegmentModal = (labelmap3D, segmentIndex, callback) => {
+    const callRelabelSegmentModal = (segmentMetadata, segmentIndex, callback) => {
       if (UIModalService) {
 
         const onSubmit = ({ type, subtype, modifier, label }) => {
           UIModalService.hide();
+
           callback({ type, subtype, modifier, label });
         }
 
         const WrappedRelabelSegmentModal = function () {
           return (
             <RelabelSegmentModal
-              labelmap3D={labelmap3D}
+              segmentMetadata={segmentMetadata}
               segmentIndex={segmentIndex}
               confirm={onSubmit}
               cancel={() => { UIModalService.hide(); }}
@@ -135,7 +136,7 @@ export default {
       const { activeContexts } = api.hooks.useAppContext();
 
       const onDisplaySetLoadFailureHandler = error => {
-        LoggerService.error({ error, message: error.message });
+        console.log('---->----->----> ', error)
         UINotificationService.show({
           title: 'DICOM Segmentation Loader',
           message: error.message,

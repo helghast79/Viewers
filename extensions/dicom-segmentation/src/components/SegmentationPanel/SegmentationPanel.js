@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import cornerstoneTools from 'cornerstone-tools';
 import cornerstone from 'cornerstone-core';
 import moment from 'moment';
-import classNames from 'classnames';
 import { utils, log } from '@ohif/core';
 import { ScrollableArea, TableList, Icon, SimpleDialog } from '@ohif/ui';
 import DICOMSegTempCrosshairsTool from '../../tools/DICOMSegTempCrosshairsTool';
@@ -76,119 +75,33 @@ const SegmentationPanel = ({
   const [state, setState] = useState({
     brushRadius: DEFAULT_BRUSH_RADIUS,
     brushColor: 'rgba(221, 85, 85, 1)',
-    selectedSegment: 0,
-    selectedSegmentation: 0,
+    selectedSegment: null,
+    selectedSegmentation: null,
     showSettings: false,
-    labelMapList: [],
+    brushStackState: null,
+    labelmapList: [],
     segmentList: [],
-    segmentsHidden: [],
-    segmentNumbers: [],
+    cachedSegmentsProperties: [],
     isLoading: false,
     isDisabled: true,
   });
   window.state = state
-
-  const getActiveViewport = () => viewports[activeIndex];
-
-  const getFirstImageId = () => {
-    const { StudyInstanceUID, displaySetInstanceUID } = getActiveViewport();
-    const studyMetadata = studyMetadataManager.get(StudyInstanceUID);
-    return studyMetadata.getFirstImageId(displaySetInstanceUID);
-  };
-
-  const getActiveLabelMaps3D = () => {
-    const { labelmaps3D, activeLabelmapIndex } = getBrushStackState();
-    return labelmaps3D[activeLabelmapIndex];
-  };
-
-  const getActiveLabelMapIndex = () => {
-    const { activeLabelmapIndex } = getBrushStackState();
-    return activeLabelmapIndex;
-  };
-
-  const getActiveSegmentIndex = () => {
-    const { activeSegmentIndex } = getActiveLabelMaps3D();
-    return activeSegmentIndex;
-  };
-
-  const getActiveLabelMaps2D = () => {
-    const { labelmaps2D } = getActiveLabelMaps3D();
-    return labelmaps2D;
-  };
-
-  const getCurrentDisplaySet = () => {
-    const { StudyInstanceUID, displaySetInstanceUID } = getActiveViewport();
-    const studyMetadata = studyMetadataManager.get(StudyInstanceUID);
-    const allDisplaySets = studyMetadata.getDisplaySets();
-    return allDisplaySets.find(
-      ds => ds.displaySetInstanceUID === displaySetInstanceUID
-    );
-  };
-
-  const setActiveSegment = segmentIndex => {
-    const activeSegmentIndex = getActiveSegmentIndex();
-    const activeViewport = getActiveViewport();
-
-    if (segmentIndex === activeSegmentIndex) {
-      log.info(`${activeSegmentIndex} is already the active segment`);
-      return;
-    }
-
-    const labelmap3D = getActiveLabelMaps3D();
-    labelmap3D.activeSegmentIndex = segmentIndex;
-
-    /**
-     * Activates the correct label map if clicked segment
-     * does not belong to the active labelmap
-     */
-    const { StudyInstanceUID } = activeViewport;
-    const studyMetadata = studyMetadataManager.get(StudyInstanceUID);
-    const allDisplaySets = studyMetadata.getDisplaySets();
-    let selectedSegmentation;
-    let newLabelmapIndex = getActiveLabelMapIndex();
-    allDisplaySets.forEach(displaySet => {
-      if (displaySet.labelmapSegments) {
-        Object.keys(displaySet.labelmapSegments).forEach(labelmapIndex => {
-          if (
-            displaySet.labelmapSegments[labelmapIndex].includes(segmentIndex)
-          ) {
-            newLabelmapIndex = labelmapIndex;
-            selectedSegmentation =
-              displaySet.hasOverlapping === true
-                ? displaySet.originLabelMapIndex
-                : labelmapIndex;
-          }
-        });
-      }
-    });
-
-    const brushStackState = getBrushStackState();
-    brushStackState.activeLabelmapIndex = newLabelmapIndex;
-    if (selectedSegmentation) {
-      setState(state => ({ ...state, selectedSegmentation }));
-    }
-
-    refreshViewports();
-
-    return segmentIndex;
-  };
 
   useEffect(() => {
     const labelmapModifiedHandler = event => {
 
       log.warn('Segmentation Panel: labelmap modified', event);
 
-      // const module = cornerstoneTools.getModule('segmentation');
-      // const activeViewport = viewports[activeIndex];
-      // const studyMetadata = studyMetadataManager.get(
-      //   activeViewport.StudyInstanceUID
-      // );
-      // const firstImageId = studyMetadata.getFirstImageId(
-      //   activeViewport.displaySetInstanceUID
-      // );
-      // updateState('brushStackState', module.state.series[firstImageId]);
+      const module = cornerstoneTools.getModule('segmentation');
+      const activeViewport = viewports[activeIndex];
+      const studyMetadata = studyMetadataManager.get(
+        activeViewport.StudyInstanceUID
+      );
+      const firstImageId = studyMetadata.getFirstImageId(
+        activeViewport.displaySetInstanceUID
+      );
+      updateState('brushStackState', module.state.series[firstImageId]);
 
-      refreshSegmentations();
     };
 
     /*
@@ -212,10 +125,11 @@ const SegmentationPanel = ({
       'extensiondicomsegmentationsegloaded',
       refreshSegmentations
     );
-    document.addEventListener(
-      'extensiondicomsegmentationsegselected',
-      updateSegmentationComboBox
-    );
+
+    // document.addEventListener(
+    //   'extensiondicomsegmentationsegselected',
+    //   updateSegmentationComboBox
+    // );
 
     /*
      * These are specific to each element;
@@ -234,10 +148,7 @@ const SegmentationPanel = ({
         'extensiondicomsegmentationsegloaded',
         refreshSegmentations
       );
-      document.removeEventListener(
-        'extensiondicomsegmentationsegselected',
-        updateSegmentationComboBox
-      );
+
       cornerstoneTools.store.state.enabledElements.forEach(enabledElement =>
         enabledElement.removeEventListener(
           'cornerstonetoolslabelmapmodified',
@@ -251,34 +162,28 @@ const SegmentationPanel = ({
     state.brushStackState
   ]);
 
-  const updateSegmentationComboBox = (e) => {
-    const index = e.detail.activatedLabelmapIndex;
-    if (index !== -1) {
-      setState(state => ({ ...state, selectedSegmentation: index }));
-    } else {
-      cleanSegmentationComboBox();
-    }
-  }
+  const refreshSegmentations = useCallback(() => {
+    const module = cornerstoneTools.getModule('segmentation');
+    const activeViewport = viewports[activeIndex];
 
-  const cleanSegmentationComboBox = () => {
-    setState(state => ({
-      ...state,
-      segmentsHidden: [],
-      segmentNumbers: [],
-      labelMapList: [],
-      segmentList: [],
-      isDisabled: true,
-      selectedSegmentation: -1,
-    }));
-  }
-
-  const refreshSegmentations = () => {
-    const activeViewport = getActiveViewport();
     const isDisabled = !activeViewport || !activeViewport.StudyInstanceUID;
     if (!isDisabled) {
-      const brushStackState = getBrushStackState();
+      const studyMetadata = studyMetadataManager.get(
+        activeViewport.StudyInstanceUID
+      );
+      const firstImageId = studyMetadata.getFirstImageId(
+        activeViewport.displaySetInstanceUID
+      );
+      const brushStackState = module.state.series[firstImageId];
+
+
+      //console.log('*******>>>>>>', activeIndex, enabledElements[activeIndex], activeLabelmapIndex)
+      if (!brushStackState.activeLabelmapIndex) {
+        brushStackState.activeLabelmapIndex = activeIndex
+      }
+
       if (brushStackState) {
-<<<<<<< HEAD
+
         const labelmap3D =
           brushStackState.labelmaps3D[brushStackState.activeLabelmapIndex];
         const labelmapList = getLabelmapList(
@@ -293,42 +198,28 @@ const SegmentationPanel = ({
           brushStackState
         );
 
-=======
-        const labelMapList = getLabelMapList();
-        const {
-          items: segmentList,
-          numbers: segmentNumbers,
-          segmentsHidden,
-        } = getSegmentList();
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
         setState(state => ({
           ...state,
-          segmentsHidden,
-          segmentNumbers,
-          labelMapList,
+          brushStackState,
+          selectedSegmentation: brushStackState.activeLabelmapIndex,
+          labelmapList,
           segmentList,
           isDisabled,
         }));
       } else {
         setState(state => ({
           ...state,
-          segmentsHidden: [],
-          segmentNumbers: [],
-          labelMapList: [],
+          labelmapList: [],
           segmentList: [],
           isDisabled,
         }));
       }
     }
-<<<<<<< HEAD
   }, [
     viewports,
     activeIndex,
     state.isLoading
   ]);
-=======
-  };
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
 
   useEffect(() => {
     refreshSegmentations();
@@ -350,7 +241,6 @@ const SegmentationPanel = ({
     }));
   }, [isOpen]);
 
-<<<<<<< HEAD
   const getLabelmapList = useCallback(
     (brushStackState, firstImageId, activeViewport) => {
 
@@ -444,534 +334,253 @@ const SegmentationPanel = ({
               }
             }
           }
-=======
-  const getLabelMapList = () => {
-    const activeViewport = getActiveViewport();
 
-    /* Get list of SEG labelmaps specific to active viewport (reference series) */
-    const referencedSegDisplaysets = _getReferencedSegDisplaysets(
-      activeViewport.StudyInstanceUID,
-      activeViewport.SeriesInstanceUID
-    );
+          return acc;
+        }, [])
+        .sort((a, b) => a - b);
 
-    const filteredReferencedSegDisplaysets = referencedSegDisplaysets.filter(
-      (segDisplay => segDisplay.loadError !== true));
+      const module = cornerstoneTools.getModule('segmentation');
+      const colorLutTable =
+        module.state.colorLutTables[labelmap3D.colorLUTIndex];
+      const hasLabelmapMeta = labelmap3D.metadata && labelmap3D.metadata.data;
 
-    return filteredReferencedSegDisplaysets.map((displaySet, index) => {
-      const {
-        labelmapIndex,
-        originLabelMapIndex,
-        hasOverlapping,
-        SeriesDate,
-        SeriesTime,
-      } = displaySet;
+      const segmentList = [];
+      for (let i = 0; i < uniqueSegmentIndexes.length; i++) {
+        const segmentIndex = uniqueSegmentIndexes[i];
 
-      /* Map to display representation */
-      const dateStr = `${SeriesDate}:${SeriesTime}`.split('.')[0];
-      const date = moment(dateStr, 'YYYYMMDD:HHmmss');
-      const displayDate = date.format('ddd, MMM Do YYYY, h:mm:ss a');
-      const displayDescription = displaySet.SeriesDescription;
+        const color = colorLutTable[segmentIndex];
+        let segmentLabel = '(unlabeled)';
+        let segmentNumber = segmentIndex;
 
-      return {
-        value: hasOverlapping === true ? originLabelMapIndex : labelmapIndex,
-        title: displayDescription,
-        description: displayDate,
-        onClick: async () => {
-          const activatedLabelmapIndex = await setActiveLabelmap(
-            activeViewport,
-            studies,
-            displaySet,
-            onSelectedSegmentationChange,
-            onDisplaySetLoadFailure
-          );
-          setState(state => ({
-            ...state,
-            selectedSegmentation: activatedLabelmapIndex,
-          }));
-        },
-      };
-    });
-  };
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
+        /* Meta */
+        if (hasLabelmapMeta) {
+          const segmentMeta = labelmap3D.metadata.data[segmentIndex];
 
-          const setCurrentSelectedSegment = segmentNumber => {
-            setActiveSegment(segmentNumber);
-
-<<<<<<< HEAD
-            const module = cornerstoneTools.getModule('segmentation');
-            const colorLutTable = module.state.colorLutTables[labelmap3D.colorLUTIndex];
-            const hasLabelmapMeta = labelmap3D.metadata && labelmap3D.metadata.data;
-
-            const segmentList = [];
-            for (let i = 0; i < uniqueSegmentIndexes.length; i++) {
-              const segmentIndex = uniqueSegmentIndexes[i];
-              const color = colorLutTable[segmentIndex];
-
-              let segmentLabel = '(unlabeled)';
-              let segmentNumber = segmentIndex;
-              let segmentMetadata = {};
-              /* Meta */
-              if (hasLabelmapMeta) {
-                const segmentMeta = labelmap3D.metadata.data[segmentIndex];
-
-                if (segmentMeta) {
-                  segmentNumber = parseInt(segmentMeta.SegmentNumber);
-                  segmentLabel = segmentMeta.SegmentLabel;
-                  segmentMetadata = segmentMeta;
-
-                  //load color from metadata if it's defined
-                  // if (segmentMeta.RecommendedDisplayCIELabValue) {
-                  //   //dicomlab2RGB outputs sRGB -> [{0-1},{0-1},{0-1}] but we need RGB -> [{0-255},{0-255},{0-255}]
-                  //   color = dcmjs.data.Colors.dicomlab2RGB(segmentMeta.RecommendedDisplayCIELabValue).map(rgb => Math.round(rgb * 255));
-                  //   color = [...color, 255];
-                  //   //this will set the color of the labelmap while color variable above will define the color of segment item component
-                  //   module.setters.colorForSegmentIndexOfColorLUT(labelmap3D.colorLUTIndex, segmentNumber, color)
-                  // }
-                }
-              }
-
-              const sameSegment = state.selectedSegment === segmentNumber;
-
-              const setCurrentSelectedSegment = () => {
-
-                _setActiveSegment(
-                  firstImageId,
-                  segmentNumber,
-                  labelmap3D.activeSegmentIndex
-                );
-                updateState('selectedSegment', segmentNumber) //sameSegment ? null : segmentNumber);
-
-                if (!sameSegment) {
-                  updateActiveSegmentColor()
-                }
-
-                const validIndexList = [];
-                labelmap3D.labelmaps2D.forEach((labelMap2D, index) => {
-                  if (labelMap2D.segmentsOnLabelmap.includes(segmentNumber)) {
-                    validIndexList.push(index);
-                  }
-                });
-                let closest = 0
-                if (validIndexList.length) {
-                  const avg = array => array.reduce((a, b) => a + b) / array.length;
-                  const average = avg(validIndexList);
-                  closest = validIndexList.reduce((prev, curr) => {
-                    return Math.abs(curr - average) < Math.abs(prev - average)
-                      ? curr
-                      : prev;
-                  });
-                }
-
-
-                if (isCornerstone()) {
-                  const enabledElements = cornerstone.getEnabledElements();
-                  const element = enabledElements[activeIndex].element;
-                  const toolState = cornerstoneTools.getToolState(element, 'stack');
-
-                  if (!toolState) {
-                    return;
-                  }
-=======
-    const sameSegment = state.selectedSegment === segmentNumber;
-    if (!sameSegment) {
-      setState(state => ({ ...state, selectedSegment: segmentNumber }));
-    }
-
-    const validIndexList = [];
-    getActiveLabelMaps2D().forEach((labelMap2D, index) => {
-      if (labelMap2D.segmentsOnLabelmap.includes(segmentNumber)) {
-        validIndexList.push(index);
-      }
-    });
-
-    const avg = array => array.reduce((a, b) => a + b) / array.length;
-    const average = avg(validIndexList);
-    const closest = validIndexList.reduce((prev, curr) => {
-      return Math.abs(curr - average) < Math.abs(prev - average) ? curr : prev;
-    });
-
-    if (isCornerstone()) {
-      const element = getEnabledElement();
-      const toolState = cornerstoneTools.getToolState(element, 'stack');
-
-      if (!toolState) return;
-
-      const imageIds = toolState.data[0].imageIds;
-      const imageId = imageIds[closest];
-      const frameIndex = imageIds.indexOf(imageId);
-
-      const SOPInstanceUID = cornerstone.metaData.get(
-        'SOPInstanceUID',
-        imageId
-      );
-      const StudyInstanceUID = cornerstone.metaData.get(
-        'StudyInstanceUID',
-        imageId
-      );
-
-      DICOMSegTempCrosshairsTool.addCrosshair(element, imageId, segmentNumber);
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
-
-                  onSegmentItemClick({
-                    StudyInstanceUID,
-                    SOPInstanceUID,
-                    frameIndex,
-                    activeViewportIndex: activeIndex,
-                  });
-                }
-
-<<<<<<< HEAD
-                if (isVTK()) {
-                  const activeViewport = viewports[activeIndex];
-                  const studyMetadata = studyMetadataManager.get(
-                    activeViewport.StudyInstanceUID
-                  );
-                  const allDisplaySets = studyMetadata.getDisplaySets();
-                  const currentDisplaySet = allDisplaySets.find(
-                    displaySet =>
-                      displaySet.displaySetInstanceUID ===
-                      activeViewport.displaySetInstanceUID
-                  );
-
-                  const frame = labelmap3D.labelmaps2D[closest];
-
-                  onSegmentItemClick({
-                    studies,
-                    StudyInstanceUID: currentDisplaySet.StudyInstanceUID,
-                    displaySetInstanceUID: currentDisplaySet.displaySetInstanceUID,
-                    SOPClassUID: viewports[activeIndex].sopClassUIDs[0],
-                    SOPInstanceUID: currentDisplaySet.SOPInstanceUID,
-                    segmentNumber,
-                    frameIndex: closest,
-                    frame,
-                  });
-                }
-
-
-
-              };
-
-              const isSegmentVisible = () => {
-                return !labelmap3D.segmentsHidden[segmentIndex];
-              };
-
-              const toggleSegmentVisibility = () => {
-                const segmentsHidden = labelmap3D.segmentsHidden;
-                segmentsHidden[segmentIndex] = !segmentsHidden[segmentIndex];
-                return !segmentsHidden[segmentIndex];
-              };
-
-              const cachedSegmentProperties =
-                state.cachedSegmentsProperties[segmentNumber];
-              let visible = isSegmentVisible();
-              if (
-                cachedSegmentProperties &&
-                cachedSegmentProperties.visible !== visible
-              ) {
-                toggleSegmentVisibility();
-              }
-
-              const selectedClass = (state.selectedSegment === segmentNumber ? 'selected' : '')
-
-              //turn relabel segment props into dicom standard tag labels (dcmjs will convert these into P10 tags)
-              const convertSegmentPropsToMetadata = ({ type, subtype, modifier, label }) => {
-                const metadata = {};
-                if (type) {
-                  metadata.SegmentedPropertyCategoryCodeSequence = {
-                    CodeValue: type.code,
-                    CodingSchemeDesignator: type.scheme,
-                    CodeMeaning: type.name
-                  }
-                }
-                if (subtype) {
-                  metadata.SegmentedPropertyTypeCodeSequence = {
-                    CodeValue: subtype.code,
-                    CodingSchemeDesignator: subtype.scheme,
-                    CodeMeaning: subtype.name
-                  }
-                }
-                if (modifier) {
-                  metadata.SegmentedPropertyTypeModifierCodeSequence = {
-                    CodeValue: modifier.code,
-                    CodingSchemeDesignator: modifier.scheme,
-                    CodeMeaning: modifier.name
-                  }
-                }
-
-                metadata.SegmentLabel = label;
-                return metadata;
-              }
-
-              const updateSegmentMetadata = ({ type, subtype, modifier, label }) => {
-                const metadata = convertSegmentPropsToMetadata({ type, subtype, modifier, label });
-
-                labelmap3D.metadata.data[segmentNumber] = { ...labelmap3D.metadata.data[segmentNumber], ...metadata }
-                labelmap3D.metadata.data[segmentNumber].SegmentNumber = segmentNumber;
-                // labelmap3D.metadata.data[segmentNumber].RecommendedDisplayCIELabValue =  RecommendedDisplayCIELabValue: dcmjs.data.Colors.dicomlab2RGB([
-                //   1,
-                //   0,
-                //   0
-                // ]),
-
-                const updatedBrushStackState = { ...brushStackState }
-                updatedBrushStackState.labelmaps3D[brushStackState.activeLabelmapIndex] = labelmap3D;
-
-                updateState('brushStackState', updatedBrushStackState);
-              }
-
-              const deleteSegment = () => {
-                const enabledElements = cornerstone.getEnabledElements();
-                const element = enabledElements[activeIndex].element;
-                console.log(labelmap3D, brushStackState)
-
-                module.setters.deleteSegment(element, segmentNumber);
-                refreshSegmentations()
-              }
-
-
-              segmentList.push(
-                <SegmentItem
-                  key={segmentNumber}
-                  itemClass={`segment-item ${selectedClass}`}
-                  onClick={() => setCurrentSelectedSegment()}
-                  label={segmentLabel}
-                  metadata={segmentMetadata}
-                  index={segmentNumber}
-                  color={color}
-                  visible={visible}
-                  onVisibilityChange={newVisibility => {
-                    if (isCornerstone()) {
-                      const enabledElements = cornerstone.getEnabledElements();
-                      const element = enabledElements[activeIndex].element;
-                      module.setters.toggleSegmentVisibility(
-                        element,
-                        segmentNumber,
-                        brushStackState.activeLabelmapIndex
-                      );
-                    }
-
-                    if (isVTK()) {
-                      onSegmentVisibilityChange(segmentNumber, newVisibility);
-                    }
-
-                    updateCachedSegmentsProperties(segmentNumber, {
-                      visible: newVisibility,
-                    });
-                    refreshViewports();
-                  }}
-                  dialogFunction={dialogFunction}
-                  relabelSegmentModal={() => { return relabelSegmentModal(labelmap3D, segmentNumber, updateSegmentMetadata) }}
-                  deleteDialogFunction={() => { return deleteDialogFunction('Delete Segment', `Segment [ ${segmentNumber} ] - "${segmentLabel}" will be erased...`, deleteSegment) }}
-                />
-              );
-            }
-=======
-    if (isVTK()) {
-      const labelMaps3D = getActiveLabelMaps3D();
-      const currentDisplaySet = getCurrentDisplaySet();
-      const frame = labelMaps3D.labelmaps2D[closest];
-
-      onSegmentItemClick({
-        studies,
-        StudyInstanceUID: currentDisplaySet.StudyInstanceUID,
-        displaySetInstanceUID: currentDisplaySet.displaySetInstanceUID,
-        SOPClassUID: getActiveViewport().sopClassUIDs[0],
-        SOPInstanceUID: currentDisplaySet.SOPInstanceUID,
-        segmentNumber,
-        frameIndex: closest,
-        frame,
-      });
-    }
-  };
-
-  const getColorLUTTable = () => {
-    const { state } = cornerstoneTools.getModule('segmentation');
-    const { colorLUTIndex } = getActiveLabelMaps3D();
-    return state.colorLutTables[colorLUTIndex];
-  };
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
-
-            const getEnabledElement = () => {
-              const enabledElements = cornerstone.getEnabledElements();
-              return enabledElements[activeIndex].element;
-            };
-
-<<<<<<< HEAD
-            /*
-             * Let's iterate over segmentIndexes ^ above
-             * If meta has a match, use it to show info
-             * If now, add "no-meta" class
-             * Show default name
-             */
-          },
-            [
-              activeIndex,
-              onSegmentItemClick,
-              state.selectedSegment,
-              state.isLoading
-            ]
-  );
-=======
-  const onSegmentVisibilityChangeHandler = (isVisible, segmentNumber) => {
-    /** Get all labelmaps with this segmentNumber (overlapping segments) */
-    const { labelmaps3D } = getBrushStackState();
-    const possibleLabelMaps3D = labelmaps3D.filter(({ labelmaps2D }) => {
-      return labelmaps2D.some(({ segmentsOnLabelmap }) =>
-        segmentsOnLabelmap.includes(segmentNumber)
-      );
-    });
-
-    let segmentsHidden = [];
-    possibleLabelMaps3D.forEach(labelmap3D => {
-      labelmap3D.segmentsHidden[segmentNumber] = !isVisible;
-
-      segmentsHidden = [
-        ...new Set([...segmentsHidden, ...labelmap3D.segmentsHidden]),
-      ];
-    });
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
-
-      setState(state => ({ ...state, segmentsHidden }));
-
-      refreshSegmentations();
-      refreshViewports();
-
-      if (isVTK()) {
-        onSegmentVisibilityChange(segmentNumber, isVisible);
-      }
-    };
-
-  const getSegmentList = () => {
-    /*
-     * Newly created segments have no `meta`
-     * So we instead build a list of all segment indexes in use
-     * Then find any associated metadata
-     */
-    const uniqueSegmentIndexes = getActiveLabelMaps2D()
-      .reduce((acc, labelmap2D) => {
-        if (labelmap2D) {
-          const segmentIndexes = labelmap2D.segmentsOnLabelmap;
-
-          for (let i = 0; i < segmentIndexes.length; i++) {
-            if (!acc.includes(segmentIndexes[i]) && segmentIndexes[i] !== 0) {
-              acc.push(segmentIndexes[i]);
-            }
+          if (segmentMeta) {
+            segmentNumber = segmentMeta.SegmentNumber;
+            segmentLabel = segmentMeta.SegmentLabel;
           }
         }
 
-        return acc;
-      }, [])
-      .sort((a, b) => a - b);
+        const sameSegment = state.selectedSegment === segmentNumber;
+        const setCurrentSelectedSegment = () => {
+          _setActiveSegment(
+            firstImageId,
+            segmentNumber,
+            labelmap3D.activeSegmentIndex
+          );
+          updateState('selectedSegment', sameSegment ? null : segmentNumber);
 
-    const labelmap3D = getActiveLabelMaps3D();
-    const colorLutTable = getColorLUTTable();
-    const hasLabelmapMeta = labelmap3D.metadata && labelmap3D.metadata.data;
+          const validIndexList = [];
 
-    const segmentList = [];
-    const segmentNumbers = [];
-    for (let i = 0; i < uniqueSegmentIndexes.length; i++) {
-      const segmentIndex = uniqueSegmentIndexes[i];
+          labelmap3D.labelmaps2D.forEach((labelMap2D, index) => {
+            if (labelMap2D.segmentsOnLabelmap.includes(segmentNumber)) {
+              validIndexList.push(index);
+            }
+          });
+          const avg = array => array.reduce((a, b) => a + b, 0) / array.length;
+          const average = avg(validIndexList);
+          const closest = validIndexList.reduce((prev, curr) => {
+            return Math.abs(curr - average) < Math.abs(prev - average)
+              ? curr
+              : prev;
+          }, 0);
 
-      const color = colorLutTable[segmentIndex];
-      let segmentLabel = '(unlabeled)';
-      let segmentNumber = segmentIndex;
+          if (isCornerstone()) {
+            const enabledElements = cornerstone.getEnabledElements();
+            const element = enabledElements[activeIndex].element;
+            const toolState = cornerstoneTools.getToolState(element, 'stack');
 
-      /* Meta */
-      if (hasLabelmapMeta) {
-        const segmentMeta = labelmap3D.metadata.data[segmentIndex];
-        if (segmentMeta) {
-          segmentNumber = segmentMeta.SegmentNumber;
-          segmentLabel = segmentMeta.SegmentLabel;
+            if (!toolState) {
+              return;
+            }
+
+            const imageIds = toolState.data[0].imageIds;
+            const imageId = imageIds[closest];
+            const frameIndex = imageIds.indexOf(imageId);
+
+            const SOPInstanceUID = cornerstone.metaData.get(
+              'SOPInstanceUID',
+              imageId
+            );
+            const StudyInstanceUID = cornerstone.metaData.get(
+              'StudyInstanceUID',
+              imageId
+            );
+
+            DICOMSegTempCrosshairsTool.addCrosshair(
+              element,
+              imageId,
+              segmentNumber
+            );
+
+            onSegmentItemClick({
+              StudyInstanceUID,
+              SOPInstanceUID,
+              frameIndex,
+              activeViewportIndex: activeIndex,
+            });
+          }
+
+          if (isVTK()) {
+            const activeViewport = viewports[activeIndex];
+            const studyMetadata = studyMetadataManager.get(
+              activeViewport.StudyInstanceUID
+            );
+            const allDisplaySets = studyMetadata.getDisplaySets();
+            const currentDisplaySet = allDisplaySets.find(
+              displaySet =>
+                displaySet.displaySetInstanceUID ===
+                activeViewport.displaySetInstanceUID
+            );
+
+            const frame = labelmap3D.labelmaps2D[closest];
+
+            onSegmentItemClick({
+              studies,
+              StudyInstanceUID: currentDisplaySet.StudyInstanceUID,
+              displaySetInstanceUID: currentDisplaySet.displaySetInstanceUID,
+              SOPClassUID: viewports[activeIndex].sopClassUIDs[0],
+              SOPInstanceUID: currentDisplaySet.SOPInstanceUID,
+              segmentNumber,
+              frameIndex: closest,
+              frame,
+            });
+          }
+        };
+
+        const isSegmentVisible = () => {
+          return !labelmap3D.segmentsHidden[segmentIndex];
+        };
+
+        const toggleSegmentVisibility = () => {
+          const segmentsHidden = labelmap3D.segmentsHidden;
+          segmentsHidden[segmentIndex] = !segmentsHidden[segmentIndex];
+          return !segmentsHidden[segmentIndex];
+        };
+
+        const cachedSegmentProperties =
+          state.cachedSegmentsProperties[segmentNumber];
+        let visible = isSegmentVisible();
+        if (
+          cachedSegmentProperties &&
+          cachedSegmentProperties.visible !== visible
+        ) {
+          toggleSegmentVisibility();
         }
+        const segmentMetadata = labelmap3D.metadata.data[segmentIndex]
+
+        segmentList.push(
+          <SegmentItem
+            key={segmentNumber}
+            index={parseInt(segmentNumber)}
+            label={segmentLabel}
+            onClick={() => setCurrentSelectedSegment()}
+            itemClass={`segment-item ${sameSegment && 'selected'}`}
+            color={color}
+            visible={visible}
+            onVisibilityChange={newVisibility => {
+              if (isCornerstone()) {
+                const enabledElements = cornerstone.getEnabledElements();
+                const element = enabledElements[activeIndex].element;
+                module.setters.toggleSegmentVisibility(
+                  element,
+                  segmentNumber,
+                  brushStackState.activeLabelmapIndex
+                );
+              }
+
+              if (isVTK()) {
+                onSegmentVisibilityChange(segmentNumber, newVisibility);
+              }
+
+              updateCachedSegmentsProperties(segmentNumber, {
+                visible: newVisibility,
+              });
+              refreshViewports();
+            }}
+            dialogFunction={dialogFunction}
+            relabelSegmentModal={relabelSegmentModal}
+            deleteDialogFunction={deleteDialogFunction}
+            segmentMetadata={segmentMetadata}
+          />
+        );
       }
 
-      const sameSegment = state.selectedSegment === segmentNumber;
+      return segmentList;
 
-      segmentNumbers.push(segmentNumber);
-      segmentList.push(
-        <SegmentItem
-          key={segmentNumber}
-          itemClass={`segment-item ${sameSegment && 'selected'}`}
-          onClick={setCurrentSelectedSegment}
-          label={segmentLabel}
-          index={segmentNumber}
-          color={color}
-          visible={!labelmap3D.segmentsHidden[segmentIndex]}
-          onVisibilityChange={onSegmentVisibilityChangeHandler}
-        />
-      );
-    }
+      /*
+       * Let's iterate over segmentIndexes ^ above
+       * If meta has a match, use it to show info
+       * If now, add "no-meta" class
+       * Show default name
+       */
+    },
+    [activeIndex, onSegmentItemClick, state.selectedSegment, state.isLoading]
+  );
 
-    return {
-      items: segmentList,
-      numbers: segmentNumbers,
-      segmentsHidden: labelmap3D.segmentsHidden,
-    };
+  const updateCachedSegmentsProperties = (segmentNumber, properties) => {
+    const segmentsProperties = state.cachedSegmentsProperties;
+    const segmentProperties = state.cachedSegmentsProperties[segmentNumber];
 
-    /*
-     * Let's iterate over segmentIndexes ^ above
-     * If meta has a match, use it to show info
-     * If now, add "no-meta" class
-     * Show default name
-     */
+    segmentsProperties[segmentNumber] = segmentProperties
+      ? { ...segmentProperties, ...properties }
+      : properties;
+
+    updateState('cachedSegmentsProperties', segmentsProperties);
+  };
+
+  useEffect(() => {
+    updateState('cachedSegmentsProperties', []);
+  }, [activeContexts]);
+
+  const updateState = (field, value) => {
+    setState(state => ({ ...state, [field]: value }));
   };
 
   const updateBrushSize = evt => {
     const updatedRadius = Number(evt.target.value);
 
-<<<<<<< HEAD
     if (updatedRadius !== state.brushRadius) { //miguel: brushRadius is managed by state
       updateState('brushRadius', updatedRadius);
-=======
-    if (updatedRadius !== brushRadius) {
-      setState(state => ({ ...state, brushRadius: updatedRadius }));
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
       const module = cornerstoneTools.getModule('segmentation');
       module.setters.radius(updatedRadius);
     }
   };
 
   const decrementSegment = event => {
-    const activeSegmentIndex = getActiveSegmentIndex();
     event.preventDefault();
-    if (activeSegmentIndex > 1) {
-      activeSegmentIndex--;
+    if (labelmap3D.activeSegmentIndex > 1) {
+      labelmap3D.activeSegmentIndex--;
     }
-    setState(state => ({ ...state, selectedSegment: activeSegmentIndex }));
+    updateState('selectedSegment', labelmap3D.activeSegmentIndex);
     updateActiveSegmentColor();
   };
 
   const incrementSegment = event => {
-    const activeSegmentIndex = getActiveSegmentIndex();
     event.preventDefault();
-    activeSegmentIndex++;
-    setState(state => ({ ...state, selectedSegment: activeSegmentIndex }));
+    labelmap3D.activeSegmentIndex++;
+    updateState('selectedSegment', labelmap3D.activeSegmentIndex);
     updateActiveSegmentColor();
   };
 
   const updateActiveSegmentColor = () => {
     const color = getActiveSegmentColor();
-    setState(state => ({ ...state, brushColor: color }));
-  };
-
-  const getBrushStackState = () => {
-    const module = cornerstoneTools.getModule('segmentation');
-    const firstImageId = getFirstImageId();
-    const brushStackState = module.state.series[firstImageId];
-    return brushStackState;
+    updateState('brushColor', color);
   };
 
   const getActiveSegmentColor = () => {
-    const brushStackState = getBrushStackState();
-    if (!brushStackState) {
+    if (!state.brushStackState) {
       return 'rgba(255, 255, 255, 1)';
     }
     //miguel: labelmap3D is referenced without being defined
     const activeLabelIndex = state.brushStackState.activeLabelmapIndex
     const labelmap3D = state.brushStackState.labelmaps3D[activeLabelIndex];
 
-    const colorLutTable = getColorLUTTable();
+    const module = cornerstoneTools.getModule('segmentation');
+    const colorLutTable = module.state.colorLutTables[labelmap3D.colorLUTIndex];
     const color = colorLutTable[labelmap3D.activeSegmentIndex];
+
     return `rgba(${color.join(',')})`;
   };
 
@@ -991,15 +600,14 @@ const SegmentationPanel = ({
     refreshViewports();
   };
 
-<<<<<<< HEAD
   //add new label map
   const addSegmentation = (state) => {
 
     const enabledElements = cornerstone.getEnabledElements()
     const element = enabledElements[activeIndex].element
+    const toolState = cornerstoneTools.getToolState(element, "stack");
 
-    const stackToolState = cornerstoneTools.getToolState(element, "stack");
-    const imageIds = stackToolState.data[0].imageIds;
+    const imageIds = toolState.data[0].imageIds;
     const firstImageId = imageIds[0];
 
     let imagePromises = [];
@@ -1360,63 +968,26 @@ const SegmentationPanel = ({
 
 
 
-=======
-  const onVisibilityChangeHandler = isVisible => {
-    let segmentsHidden = [];
-    state.segmentNumbers.forEach(segmentNumber => {
-      if (isVTK()) {
-        onSegmentVisibilityChange(segmentNumber, isVisible);
-      }
-
-      /** Get all labelmaps with this segmentNumber (overlapping segments) */
-      const { labelmaps3D } = getBrushStackState();
-      const possibleLabelMaps3D = labelmaps3D.filter(({ labelmaps2D }) => {
-        return labelmaps2D.some(({ segmentsOnLabelmap }) =>
-          segmentsOnLabelmap.includes(segmentNumber)
-        );
-      });
-
-      possibleLabelMaps3D.forEach(labelmap3D => {
-        labelmap3D.segmentsHidden[segmentNumber] = !isVisible;
-        segmentsHidden = [
-          ...new Set([...segmentsHidden, ...labelmap3D.segmentsHidden]),
-        ];
-      });
-    });
-
-    setState(state => ({ ...state, segmentsHidden }));
-
-    refreshSegmentations();
-    refreshViewports();
-  };
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
 
   const disabledConfigurationFields = [
     'outlineAlpha',
     'shouldRenderInactiveLabelmaps',
   ];
-
-  const selectedSegmentationOption = state.labelMapList.find(
-    i => i.value === state.selectedSegmentation
-  );
-
   if (state.showSettings) {
     return (
       <SegmentationSettings
         disabledFields={isVTK() ? disabledConfigurationFields : []}
         configuration={configuration}
-        onBack={() => setState(state => ({ ...state, showSettings: false }))}
+        onBack={() => updateState('showSettings', false)}
         onChange={updateConfiguration}
       />
     );
   } else {
     return (
       <div
-        className={classNames('dcmseg-segmentation-panel', {
-          disabled: state.isDisabled,
-        })}
+        className={`dcmseg-segmentation-panel ${state.isDisabled &&
+          'disabled'}`}
       >
-<<<<<<< HEAD
         <div className="segmentations-header">
           {false && (
             <form className="selector-form">
@@ -1453,103 +1024,60 @@ const SegmentationPanel = ({
             name="cog"
             width="25px"
             height="25px"
-            onClick={() => updateState('showSegmentationSettings', true)}
+            onClick={() => updateState('showSettings', true)}
           />
         </div>
-=======
-        {false && (
-          <form className="selector-form">
-            <BrushColorSelector
-              defaultColor={state.brushColor}
-              index={state.selectedSegment}
-              onNext={incrementSegment}
-              onPrev={decrementSegment}
-            />
-            <BrushRadius
-              value={state.brushRadius}
-              onChange={updateBrushSize}
-              min={configuration.minRadius}
-              max={configuration.maxRadius}
-            />
-          </form>
-        )}
-        <Icon
-          className="cog-icon"
-          name="cog"
-          width="25px"
-          height="25px"
-          onClick={() => setState(state => ({ ...state, showSettings: true }))}
-        />
-        <h3>Segmentations</h3>
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
         <div className="segmentations">
           <SegmentationSelect
-            value={selectedSegmentationOption}
+            value={state.labelmapList.find(
+              i => i.value === state.selectedSegmentation
+            )}
             formatOptionLabel={SegmentationItem}
-            options={state.labelMapList}
+            options={state.labelmapList}
           />
         </div>
-<<<<<<< HEAD
-{
-  state.brushStackState && state.brushStackState.activeLabelmapIndex >= 0 && (
-    <div className="Segmentation-control">
-      <Icon
-        className="edit-icon button-icon"
-        name="edit"
-        width="17px"
-        height="17px"
-        onClick={() => editSegmentation()}
-      />
+        {state.brushStackState && state.brushStackState.activeLabelmapIndex >= 0 && (
+          <div className="Segmentation-control">
+            <Icon
+              className="edit-icon button-icon"
+              name="edit"
+              width="17px"
+              height="17px"
+              onClick={() => editSegmentation()}
+            />
 
-      <Icon
-        className="save-regular-icon button-icon"
-        name="save"
-        width="17px"
-        height="17px"
-        onClick={() => downloadSegmentation()}
-      />
+            <Icon
+              className="save-regular-icon button-icon"
+              name="save"
+              width="17px"
+              height="17px"
+              onClick={() => downloadSegmentation()}
+            />
 
-      <Icon
-        className="database-icon button-icon"
-        name="database"
-        title="sdffsd"
-        width="17px"
-        height="17px"
-        onClick={() => uploadSegmentation()}
-      />
+            <Icon
+              className="database-icon button-icon"
+              name="database"
+              title="sdffsd"
+              width="17px"
+              height="17px"
+              onClick={() => uploadSegmentation()}
+            />
 
-    </div>
-  )
-}
-{
-  state.brushStackState && state.brushStackState.activeLabelmapIndex >= 0 && (
-    <ScrollableArea>
-      <TableList
-        customHeader={<SegmentsHeader
-          count={state.segmentList.length}
-          onAddSegment={() => addSegment(state)}
-        />}
-      >
-        {state.segmentList}
-      </TableList>
-    </ScrollableArea>
-  )
-}
-=======
-        <SegmentsSection
-          count={state.segmentList.length}
-          isVisible={
-            state.segmentsHidden.filter(isHidden => isHidden === true).length <
-            state.segmentNumbers.length
-          }
-          onVisibilityChange={onVisibilityChangeHandler}
-        >
+          </div>
+        )}
+        {state.brushStackState && state.brushStackState.activeLabelmapIndex >= 0 && (
           <ScrollableArea>
-            <TableList headless>{state.segmentList}</TableList>
+            <TableList
+              customHeader={<SegmentsHeader
+                count={state.segmentList.length}
+                onAddSegment={() => addSegment(state)}
+              />}
+            >
+              {state.segmentList}
+            </TableList>
           </ScrollableArea>
-        </SegmentsSection>
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
-      </div >
+        )}
+      </div>
     );
   }
 };
@@ -1583,7 +1111,7 @@ SegmentationPanel.propTypes = {
 SegmentationPanel.defaultProps = {};
 
 /**
- * Returns SEG DisplaySets that reference the target series, sorted by dateTime
+ * Returns SEG Displaysets that reference the target series, sorted by dateTime
  *
  * @param {string} StudyInstanceUID
  * @param {string} SeriesInstanceUID
@@ -1601,13 +1129,12 @@ const _getReferencedSegDisplaysets = (StudyInstanceUID, SeriesInstanceUID) => {
   referencedDisplaysets.sort((a, b) => {
     const aNumber = Number(`${a.SeriesDate}${a.SeriesTime}`);
     const bNumber = Number(`${b.SeriesDate}${b.SeriesTime}`);
-    return bNumber - aNumber;
+    return aNumber - bNumber;
   });
 
   return referencedDisplaysets;
 };
 
-<<<<<<< HEAD
 /**
  *
  * @param {*} firstImageId
@@ -1615,6 +1142,7 @@ const _getReferencedSegDisplaysets = (StudyInstanceUID, SeriesInstanceUID) => {
  * @returns
  */
 const _setActiveSegment = (firstImageId, segmentIndex, activeSegmentIndex) => {
+
   if (segmentIndex === activeSegmentIndex) {
     log.info(`${activeSegmentIndex} is already the active segment`);
     return;
@@ -1652,50 +1180,7 @@ const SegmentsHeader = ({ count, onAddSegment }) => {
       </div>
       <div className="numberOfItems">{count}</div>
     </React.Fragment>
-=======
-const SegmentsSection = ({
-  count,
-  children,
-  isVisible: defaultVisibility,
-  onVisibilityChange,
-}) => {
-  const [isVisible, setIsVisible] = useState(defaultVisibility);
-
-  const onVisibilityChangeHandler = () => {
-    const newVisibility = !isVisible;
-    setIsVisible(newVisibility);
-    onVisibilityChange(newVisibility);
-  };
-
-  useEffect(() => {
-    setIsVisible(defaultVisibility);
-  }, [defaultVisibility]);
-
-  return (
-    <div className="SegmentsSection">
-      <div className="header">
-        <div>Segments</div>
-        <div className="icons">
-          <Icon
-            className={`eye-icon ${isVisible && 'expanded'}`}
-            name={isVisible ? 'eye' : 'eye-closed'}
-            width="20px"
-            height="20px"
-            onClick={onVisibilityChangeHandler}
-          />
-          <div className="count">{count}</div>
-        </div>
-      </div>
-      {children}
-    </div>
->>>>>>> 2afcd498f320bd7280046618beaa1066155edb37
   );
-};
-
-const noop = () => { };
-
-SegmentsSection.defaultProps = {
-  onVisibilityChange: noop,
 };
 
 export default SegmentationPanel;
