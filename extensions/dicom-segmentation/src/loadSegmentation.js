@@ -1,5 +1,5 @@
 import OHIF from '@ohif/core';
-import dcmjs from './components/SegmentationPanel/dcmjsCompiled' //'dcmjs';
+import dcmjs from './components/SegmentationPanel/dcmjsCompiled';
 import cornerstone from 'cornerstone-core';
 import cornerstoneTools from 'cornerstone-tools';
 

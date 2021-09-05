@@ -18,18 +18,17 @@ import segCodes from './segCodes.js';
 
 
 const RelabelSegmentModal = ({
-  //labelmap3D,
-  segmentMetadata,
+  labelmap3D,
   segmentIndex,
   confirm,
   cancel,
-  //metadata = labelmap3D.metadata.data[segmentIndex] || {}
+  metadata = labelmap3D.metadata.data[segmentIndex] || {}
 }) => {
 
 
-  const metaCat = segmentMetadata.SegmentedPropertyCategoryCodeSequence;
-  const metaType = segmentMetadata.SegmentedPropertyTypeCodeSequence;
-  const metaMod = segmentMetadata.SegmentedPropertyTypeModifierCodeSequence;
+  const metaCat = metadata.SegmentedPropertyCategoryCodeSequence;
+  const metaType = metadata.SegmentedPropertyTypeCodeSequence;
+  const metaMod = metadata.SegmentedPropertyTypeModifierCodeSequence;
 
   let segCat = null;
   let segType = null;
@@ -89,7 +88,7 @@ const RelabelSegmentModal = ({
     selectedSubtype: segType,
     selectedModifier: segMod,
     filteredText: '',
-    label: segmentMetadata.SegmentLabel || null,
+    label: metadata.SegmentLabel || null,
   });
 
 
@@ -202,7 +201,7 @@ const RelabelSegmentModal = ({
 
   return (
     <div className="relabel-modal">
-      {state.showWarningMetadataNotFound && (
+      { state.showWarningMetadataNotFound && (
         <p className="show-warning-metadata-not-found">{state.showWarningMetadataNotFound}</p>
       )}
       <p className="warning-meta-not-found"></p>
@@ -376,8 +375,7 @@ const RelabelSegmentModal = ({
 
 
 RelabelSegmentModal.propTypes = {
-  //labelmap3D: PropTypes.object.isRequired,
-  segmentMetadata: PropTypes.object.isRequired,
+  labelmap3D: PropTypes.object.isRequired,
   segmentIndex: PropTypes.number.isRequired,
   confirm: PropTypes.func.isRequired,
   cancel: PropTypes.func.isRequired

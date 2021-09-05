@@ -77,7 +77,7 @@ const SegmentationPanel = ({
     brushColor: 'rgba(221, 85, 85, 1)',
     selectedSegment: null,
     selectedSegmentation: null,
-    showSettings: false,
+    showSegmentationSettings: false,
     brushStackState: null,
     labelmapList: [],
     segmentList: [],
@@ -126,11 +126,6 @@ const SegmentationPanel = ({
       refreshSegmentations
     );
 
-    // document.addEventListener(
-    //   'extensiondicomsegmentationsegselected',
-    //   updateSegmentationComboBox
-    // );
-
     /*
      * These are specific to each element;
      * Need to iterate cornerstone-tools tracked enabled elements?
@@ -175,15 +170,7 @@ const SegmentationPanel = ({
         activeViewport.displaySetInstanceUID
       );
       const brushStackState = module.state.series[firstImageId];
-
-
-      //console.log('*******>>>>>>', activeIndex, enabledElements[activeIndex], activeLabelmapIndex)
-      if (!brushStackState.activeLabelmapIndex) {
-        brushStackState.activeLabelmapIndex = activeIndex
-      }
-
       if (brushStackState) {
-
         const labelmap3D =
           brushStackState.labelmaps3D[brushStackState.activeLabelmapIndex];
         const labelmapList = getLabelmapList(
@@ -237,7 +224,7 @@ const SegmentationPanel = ({
   useEffect(() => {
     setState(state => ({
       ...state,
-      showSettings: state.showSettings && !isOpen,
+      showSegmentationSettings: state.showSegmentationSettings && !isOpen,
     }));
   }, [isOpen]);
 
@@ -340,51 +327,69 @@ const SegmentationPanel = ({
         .sort((a, b) => a - b);
 
       const module = cornerstoneTools.getModule('segmentation');
-      const colorLutTable =
-        module.state.colorLutTables[labelmap3D.colorLUTIndex];
+      const colorLutTable = module.state.colorLutTables[labelmap3D.colorLUTIndex];
       const hasLabelmapMeta = labelmap3D.metadata && labelmap3D.metadata.data;
 
       const segmentList = [];
       for (let i = 0; i < uniqueSegmentIndexes.length; i++) {
         const segmentIndex = uniqueSegmentIndexes[i];
-
         const color = colorLutTable[segmentIndex];
+
         let segmentLabel = '(unlabeled)';
         let segmentNumber = segmentIndex;
-
+        let segmentMetadata = {};
         /* Meta */
         if (hasLabelmapMeta) {
           const segmentMeta = labelmap3D.metadata.data[segmentIndex];
 
           if (segmentMeta) {
-            segmentNumber = segmentMeta.SegmentNumber;
+            segmentNumber = parseInt(segmentMeta.SegmentNumber);
             segmentLabel = segmentMeta.SegmentLabel;
+            segmentMetadata = segmentMeta;
+
+            //load color from metadata if it's defined
+            // if (segmentMeta.RecommendedDisplayCIELabValue) {
+            //   //dicomlab2RGB outputs sRGB -> [{0-1},{0-1},{0-1}] but we need RGB -> [{0-255},{0-255},{0-255}]
+            //   color = dcmjs.data.Colors.dicomlab2RGB(segmentMeta.RecommendedDisplayCIELabValue).map(rgb => Math.round(rgb * 255));
+            //   color = [...color, 255];
+            //   //this will set the color of the labelmap while color variable above will define the color of segment item component
+            //   module.setters.colorForSegmentIndexOfColorLUT(labelmap3D.colorLUTIndex, segmentNumber, color)
+            // }
           }
         }
 
         const sameSegment = state.selectedSegment === segmentNumber;
+
         const setCurrentSelectedSegment = () => {
+
           _setActiveSegment(
             firstImageId,
             segmentNumber,
             labelmap3D.activeSegmentIndex
           );
-          updateState('selectedSegment', sameSegment ? null : segmentNumber);
+          updateState('selectedSegment', segmentNumber) //sameSegment ? null : segmentNumber);
+
+          if (!sameSegment) {
+            updateActiveSegmentColor()
+          }
 
           const validIndexList = [];
-
           labelmap3D.labelmaps2D.forEach((labelMap2D, index) => {
             if (labelMap2D.segmentsOnLabelmap.includes(segmentNumber)) {
               validIndexList.push(index);
             }
           });
-          const avg = array => array.reduce((a, b) => a + b, 0) / array.length;
-          const average = avg(validIndexList);
-          const closest = validIndexList.reduce((prev, curr) => {
-            return Math.abs(curr - average) < Math.abs(prev - average)
-              ? curr
-              : prev;
-          }, 0);
+          let closest = 0
+          if (validIndexList.length) {
+            const avg = array => array.reduce((a, b) => a + b) / array.length;
+            const average = avg(validIndexList);
+            closest = validIndexList.reduce((prev, curr) => {
+              return Math.abs(curr - average) < Math.abs(prev - average)
+                ? curr
+                : prev;
+            });
+          }
+
 
           if (isCornerstone()) {
             const enabledElements = cornerstone.getEnabledElements();
@@ -447,6 +452,9 @@ const SegmentationPanel = ({
               frame,
             });
           }
+
+
+
         };
 
         const isSegmentVisible = () => {
@@ -468,15 +476,73 @@ const SegmentationPanel = ({
         ) {
           toggleSegmentVisibility();
         }
-        const segmentMetadata = labelmap3D.metadata.data[segmentIndex]
+
+        const selectedClass = (state.selectedSegment === segmentNumber ? 'selected' : '')
+
+        //turn relabel segment props into dicom standard tag labels (dcmjs will convert these into P10 tags)
+        const convertSegmentPropsToMetadata = ({ type, subtype, modifier, label }) => {
+          const metadata = {};
+          if (type) {
+            metadata.SegmentedPropertyCategoryCodeSequence = {
+              CodeValue: type.code,
+              CodingSchemeDesignator: type.scheme,
+              CodeMeaning: type.name
+            }
+          }
+          if (subtype) {
+            metadata.SegmentedPropertyTypeCodeSequence = {
+              CodeValue: subtype.code,
+              CodingSchemeDesignator: subtype.scheme,
+              CodeMeaning: subtype.name
+            }
+          }
+          if (modifier) {
+            metadata.SegmentedPropertyTypeModifierCodeSequence = {
+              CodeValue: modifier.code,
+              CodingSchemeDesignator: modifier.scheme,
+              CodeMeaning: modifier.name
+            }
+          }
+
+          metadata.SegmentLabel = label;
+          return metadata;
+        }
+
+        const updateSegmentMetadata = ({ type, subtype, modifier, label }) => {
+          const metadata = convertSegmentPropsToMetadata({ type, subtype, modifier, label });
+
+          labelmap3D.metadata.data[segmentNumber] = { ...labelmap3D.metadata.data[segmentNumber], ...metadata }
+          labelmap3D.metadata.data[segmentNumber].SegmentNumber = segmentNumber;
+          // labelmap3D.metadata.data[segmentNumber].RecommendedDisplayCIELabValue =  RecommendedDisplayCIELabValue: dcmjs.data.Colors.dicomlab2RGB([
+          //   1,
+          //   0,
+          //   0
+          // ]),
+
+          const updatedBrushStackState = { ...brushStackState }
+          updatedBrushStackState.labelmaps3D[brushStackState.activeLabelmapIndex] = labelmap3D;
+
+          updateState('brushStackState', updatedBrushStackState);
+        }
+
+        const deleteSegment = () => {
+          const enabledElements = cornerstone.getEnabledElements();
+          const element = enabledElements[activeIndex].element;
+          console.log(labelmap3D, brushStackState)
+
+          module.setters.deleteSegment(element, segmentNumber);
+          refreshSegmentations()
+        }
+
 
         segmentList.push(
           <SegmentItem
             key={segmentNumber}
-            index={parseInt(segmentNumber)}
-            label={segmentLabel}
+            itemClass={`segment-item ${selectedClass}`}
             onClick={() => setCurrentSelectedSegment()}
-            itemClass={`segment-item ${sameSegment && 'selected'}`}
+            label={segmentLabel}
+            metadata={segmentMetadata}
+            index={segmentNumber}
             color={color}
             visible={visible}
             onVisibilityChange={newVisibility => {
@@ -500,9 +566,8 @@ const SegmentationPanel = ({
               refreshViewports();
             }}
             dialogFunction={dialogFunction}
-            relabelSegmentModal={relabelSegmentModal}
-            deleteDialogFunction={deleteDialogFunction}
-            segmentMetadata={segmentMetadata}
+            relabelSegmentModal={() => { return relabelSegmentModal(labelmap3D, segmentNumber, updateSegmentMetadata) }}
+            deleteDialogFunction={() => { return deleteDialogFunction('Delete Segment', `Segment [ ${segmentNumber} ] - "${segmentLabel}" will be erased...`, deleteSegment) }}
           />
         );
       }
@@ -516,7 +581,12 @@ const SegmentationPanel = ({
        * Show default name
        */
     },
-    [activeIndex, onSegmentItemClick, state.selectedSegment, state.isLoading]
+    [
+      activeIndex,
+      onSegmentItemClick,
+      state.selectedSegment,
+      state.isLoading
+    ]
   );
 
   const updateCachedSegmentsProperties = (segmentNumber, properties) => {
@@ -605,9 +675,9 @@ const SegmentationPanel = ({
 
     const enabledElements = cornerstone.getEnabledElements()
     const element = enabledElements[activeIndex].element
-    const toolState = cornerstoneTools.getToolState(element, "stack");
 
-    const imageIds = toolState.data[0].imageIds;
+    const stackToolState = cornerstoneTools.getToolState(element, "stack");
+    const imageIds = stackToolState.data[0].imageIds;
     const firstImageId = imageIds[0];
 
     let imagePromises = [];
@@ -973,12 +1043,12 @@ const SegmentationPanel = ({
     'outlineAlpha',
     'shouldRenderInactiveLabelmaps',
   ];
-  if (state.showSettings) {
+  if (state.showSegmentationSettings) {
     return (
       <SegmentationSettings
         disabledFields={isVTK() ? disabledConfigurationFields : []}
         configuration={configuration}
-        onBack={() => updateState('showSettings', false)}
+        onBack={() => updateState('showSegmentationSettings', false)}
         onChange={updateConfiguration}
       />
     );
@@ -1024,7 +1094,7 @@ const SegmentationPanel = ({
             name="cog"
             width="25px"
             height="25px"
-            onClick={() => updateState('showSettings', true)}
+            onClick={() => updateState('showSegmentationSettings', true)}
           />
         </div>
         <div className="segmentations">
@@ -1142,7 +1212,6 @@ const _getReferencedSegDisplaysets = (StudyInstanceUID, SeriesInstanceUID) => {
  * @returns
  */
 const _setActiveSegment = (firstImageId, segmentIndex, activeSegmentIndex) => {
-
   if (segmentIndex === activeSegmentIndex) {
     log.info(`${activeSegmentIndex} is already the active segment`);
     return;

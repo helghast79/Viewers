@@ -81,19 +81,18 @@ export default {
 
 
 
-    const callRelabelSegmentModal = (segmentMetadata, segmentIndex, callback) => {
+    const callRelabelSegmentModal = (labelmap3D, segmentIndex, callback) => {
       if (UIModalService) {
 
         const onSubmit = ({ type, subtype, modifier, label }) => {
           UIModalService.hide();
-
           callback({ type, subtype, modifier, label });
         }
 
         const WrappedRelabelSegmentModal = function () {
           return (
             <RelabelSegmentModal
-              segmentMetadata={segmentMetadata}
+              labelmap3D={labelmap3D}
               segmentIndex={segmentIndex}
               confirm={onSubmit}
               cancel={() => { UIModalService.hide(); }}

@@ -29,13 +29,9 @@ const SegmentItem = ({
   dialogFunction,
   relabelSegmentModal,
   deleteDialogFunction,
-  segmentMetadata,
+  metadata
 }) => {
   const [isVisible, setIsVisible] = useState(visible);
-
-  const [state, setState] = useState([
-    segmentMetadata
-  ]);
 
   useEffect(() => {
     setIsVisible(visible);
@@ -79,41 +75,8 @@ const SegmentItem = ({
   }
 
 
-  //callback after submit the modal to save changes to the labelmap3D metadata
-  const commitChanges = ({ type, subtype, modifier, label }) => {
 
-    //const metadata = labelmap3D.metadata.data[index]
-
-    segmentMetadata.SegmentLabel = label
-
-    if (!segmentMetadata.SegmentedPropertyCategoryCodeSequence) {
-      segmentMetadata.SegmentedPropertyCategoryCodeSequence = {}
-    }
-    segmentMetadata.SegmentedPropertyCategoryCodeSequence.CodeValue = type.code
-    segmentMetadata.SegmentedPropertyCategoryCodeSequence.CodingSchemeDesignator = type.scheme
-    segmentMetadata.SegmentedPropertyCategoryCodeSequence.CodeMeaning = type.name
-
-    if (!segmentMetadata.SegmentedPropertyTypeCodeSequence) {
-      segmentMetadata.SegmentedPropertyTypeCodeSequence = {}
-    }
-    segmentMetadata.SegmentedPropertyTypeCodeSequence.CodeValue = subtype.code
-    segmentMetadata.SegmentedPropertyTypeCodeSequence.CodingSchemeDesignator = subtype.scheme
-    segmentMetadata.SegmentedPropertyTypeCodeSequence.CodeMeaning = subtype.name
-
-    if (!segmentMetadata.SegmentedPropertyTypeModifierCodeSequence) {
-      segmentMetadata.SegmentedPropertyTypeModifierCodeSequence = {}
-    }
-    if (!modifier) modifier = {}
-    segmentMetadata.SegmentedPropertyTypeModifierCodeSequence.CodeValue = modifier.code
-    segmentMetadata.SegmentedPropertyTypeModifierCodeSequence.CodingSchemeDesignator = modifier.scheme
-    segmentMetadata.SegmentedPropertyTypeModifierCodeSequence.CodeMeaning = modifier.name
-
-    setState(state => ({
-      ...state,
-      segmentMetadata
-    }))
-  }
-  const segmentProps = convertMetaToProps(segmentMetadata);
+  const segmentProps = convertMetaToProps(metadata);
   const description = getDescription(segmentProps);
 
 
@@ -131,7 +94,7 @@ const SegmentItem = ({
         <div>
           <div className="segment-label" style={{ marginBottom: 4 }}>
             <a data-tip data-for={`SegmentHover${index}`}>
-              <span>{segmentMetadata.SegmentLabel}</span>
+              <span>{label}</span>
             </a>
             <ReactTooltip
               id={`SegmentHover${index}`}
@@ -140,7 +103,7 @@ const SegmentItem = ({
               border={true}
               type="light"
             >
-              <span>{segmentMetadata.SegmentLabel}</span>
+              <span>{label}</span>
             </ReactTooltip>
             <Icon
               className={`eye-icon ${isVisible && '--visible'}`}
@@ -179,7 +142,7 @@ const SegmentItem = ({
                 className="btnAction"
                 onClick={(event) => {
                   event.stopPropagation();
-                  relabelSegmentModal(segmentMetadata, index, commitChanges);
+                  relabelSegmentModal();
                   //dialogFunction('ok', '', 'test relabel', (n) => { console.log(`relabel ${index}`) })
                 }}
               >
@@ -193,7 +156,7 @@ const SegmentItem = ({
                 className="btnAction"
                 onClick={(event) => {
                   event.stopPropagation();
-                  deleteDialogFunction('Confirm delete', `Segment #${index} - ${segmentMetadata.SegmentLabel} (${description}) will be removed!`, (a) => { console.log(a) });
+                  deleteDialogFunction();
                 }}
               >
                 <span style={{ marginRight: '4px' }}>
@@ -215,7 +178,7 @@ SegmentItem.propTypes = {
   onClick: PropTypes.func,
   itemClass: PropTypes.string,
   color: PropTypes.array.isRequired,
-  segmentMetadata: PropTypes.object,
+  metadata: PropTypes.object,
 };
 
 SegmentItem.defaultProps = {
