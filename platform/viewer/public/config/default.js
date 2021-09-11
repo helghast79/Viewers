@@ -22,6 +22,17 @@ window.config = {
   showStudyList: true,
   //studyListDateFilterNumDays: 10,
   //defaultStartDate: '01/01/2001',
+  filterQueryParam: false,
+  disableServersCache: false,
+  studyPrefetcher: {
+    enabled: true,
+    order: 'closest',
+    displaySetCount: 3,
+    preventCache: false,
+    prefetchDisplaySetsTimeout: 300,
+    displayProgress: true,
+    includeActiveDisplaySet: true,
+  },
   servers: {
 
     dicomWeb: [
