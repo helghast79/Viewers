@@ -7,10 +7,10 @@ import { utils, log } from '@ohif/core';
 import { ScrollableArea, TableList, Icon, SimpleDialog } from '@ohif/ui';
 import DICOMSegTempCrosshairsTool from '../../tools/DICOMSegTempCrosshairsTool';
 
+
 import setActiveLabelmap from '../../utils/setActiveLabelMap';
 import refreshViewports from '../../utils/refreshViewports';
 
-//import dcmjs from './dcmjsModified';
 import dcmjs from './dcmjsCompiled';
 
 
@@ -121,10 +121,12 @@ const SegmentationPanel = ({
      * allows us to easily watch the module or the segmentations loading process in any other component
      * without subscribing to external events.
      */
-    document.addEventListener(
-      'extensiondicomsegmentationsegloaded',
-      refreshSegmentations
-    );
+
+    //dosen't make sense here because it will only be created when the panel is open
+    // document.addEventListener(
+    //   'extensiondicomsegmentationsegloaded',
+    //   refreshSegmentations
+    // );
 
     /*
      * These are specific to each element;
@@ -139,10 +141,10 @@ const SegmentationPanel = ({
     );
 
     return () => {
-      document.removeEventListener(
-        'extensiondicomsegmentationsegloaded',
-        refreshSegmentations
-      );
+      // document.removeEventListener(
+      //   'extensiondicomsegmentationsegloaded',
+      //   refreshSegmentations
+      // );
 
       cornerstoneTools.store.state.enabledElements.forEach(enabledElement =>
         enabledElement.removeEventListener(
@@ -186,6 +188,7 @@ const SegmentationPanel = ({
 
   const refreshSegmentations = useCallback(() => {
     const module = cornerstoneTools.getModule('segmentation');
+
     const activeViewport = viewports[activeIndex];
 
     const isDisabled = !activeViewport || !activeViewport.StudyInstanceUID;
@@ -268,13 +271,12 @@ const SegmentationPanel = ({
         segDisplay => segDisplay.loadError !== true
       );
 
-
       let labelmapList = [];
 
       //get labelMapList from referecedDisplaySets
       labelmapList = filteredReferencedSegDisplaysets.map((displaySet, index) => {
 
-        const { labelmapIndex, SeriesDate, SeriesTime } = displaySet;
+        const { labelmapIndex, SeriesDescription, SeriesDate, SeriesTime } = displaySet;
 
         /* Map to display representation */
         const dateStr = `${SeriesDate}:${SeriesTime}`.split('.')[0];
@@ -284,7 +286,16 @@ const SegmentationPanel = ({
         const displayDate = date.format('ddd, MMM Do YYYY');
         const displayTime = date.format('h:mm:ss a');
 
-        const displayDescription = displaySet.SeriesDescription //brushStackState.labelmaps3D[labelmapIndex].metadata.SeriesDescription; //displaySet.SeriesDescription;
+        let displayDescription = SeriesDescription
+        if (brushStackState &&
+          brushStackState.labelmaps3D &&
+          brushStackState.labelmaps3D[labelmapIndex] &&
+          brushStackState.labelmaps3D[labelmapIndex].metadata &&
+          brushStackState.labelmaps3D[labelmapIndex].metadata.SeriesDescription) {
+          displayDescription = brushStackState.labelmaps3D[labelmapIndex].metadata.SeriesDescription
+        }
+        //const displayDescription = brushStackState.labelmaps3D[labelmapIndex].metadata.SeriesDescription; //displaySet.SeriesDescription;
+        //const displayDescription = SeriesDescription;
 
         return {
           value: labelmapIndex,
@@ -313,9 +324,13 @@ const SegmentationPanel = ({
           return true;
         }
 
+        if (!labelMap3D.metadata.SeriesDescription) {
+          labelMap3D.metadata.SeriesDescription = '(no description set)'
+        }
+
         const todayDate = moment(new Date(), 'YYYYMMDD:HHmmss');
         const description = todayDate.format('ddd, MMM Do YYYY');
-        const title = labelMap3D.metadata.SeriesDescription || "New segmentation";
+        const title = labelMap3D.metadata.SeriesDescription;
 
         labelmapList.push({
           value: i,
@@ -348,7 +363,7 @@ const SegmentationPanel = ({
       const uniqueSegmentIndexes = labelmap3D.labelmaps2D
         .reduce((acc, labelmap2D) => {
           if (labelmap2D) {
-            const segmentIndexes = labelmap2D.segmentsOnLabelmap;
+            const segmentIndexes = labelmap2D.segmentsOnLabelmap; //ex: [0, 4, 1, 3, 2] //0 is not a segment and it's always there
 
             for (let i = 0; i < segmentIndexes.length; i++) {
               if (!acc.includes(segmentIndexes[i]) && segmentIndexes[i] !== 0) {
@@ -359,7 +374,7 @@ const SegmentationPanel = ({
 
           return acc;
         }, [])
-        .sort((a, b) => a - b);
+        .sort((a, b) => a - b); //ex: [1, 2, 3, 4]
 
       const module = cornerstoneTools.getModule('segmentation');
       const colorLutTable = module.state.colorLutTables[labelmap3D.colorLUTIndex];
@@ -563,7 +578,7 @@ const SegmentationPanel = ({
         const deleteSegment = () => {
           const enabledElements = cornerstone.getEnabledElements();
           const element = enabledElements[activeIndex].element;
-          console.log(labelmap3D, brushStackState)
+
 
           module.setters.deleteSegment(element, segmentNumber);
           refreshSegmentations()
@@ -706,7 +721,19 @@ const SegmentationPanel = ({
   };
 
   //add new label map
-  const addSegmentation = (state) => {
+  const addSegmentation = async (state) => {
+
+    const activeViewport = viewports[activeIndex];
+    const studyMetadata = studyMetadataManager.get(
+      activeViewport.StudyInstanceUID
+    );
+
+    //      not needed for now but keeping it for future reference
+    const referencedStudy = studies.find(study => study.StudyInstanceUID === activeViewport.StudyInstanceUID)
+    const referecedDisplaySet = referencedStudy.displaySets.find(displaySet => displaySet.displaySetInstanceUID === activeViewport.displaySetInstanceUID)
+    const referencedSeries = referencedStudy.series.find(series => series.SeriesInstanceUID === activeViewport.SeriesInstanceUID)
+    const firstReferencedInstance = referencedSeries.instances[0]
+
 
     const enabledElements = cornerstone.getEnabledElements()
     const element = enabledElements[activeIndex].element
@@ -721,55 +748,88 @@ const SegmentationPanel = ({
         cornerstone.loadImage(imageIds[i])
       );
     }
+    //get images and the total size in bytes
+    const images = await Promise.all(imagePromises)
+    const overallSize = images.reduce((acc, image) => acc += image.sizeInBytes, 0)
+    //create a new labelMapBuffer with the same size as the reference study images
+    const labelmapBuffer = new Uint16Array(overallSize)
 
-    let overallSize = 0;
+    const module = cornerstoneTools.getModule('segmentation')
+    //this will be undefined if there are not labelmaps loaded
+    const labelmaps3D = module.getters.labelmaps3D(element).labelmaps3D
+    //set the index of the new labelmap, 0 if no labelmaps created yet
+    let labelmapIndex = 0
+    if (typeof labelmaps3D !== 'undefined') {
+      labelmapIndex = labelmaps3D.length
+    }
 
-    Promise.all(imagePromises).then(images => {
-      images.forEach(image => {
-        overallSize += image.sizeInBytes
-      });
+    //get default value for SeriesDescription and SeriesNumber (SeriesDescription is editable afterwards )
+    let newSeriesNumber = 1,
+      newSegSeriesNumber = 1
 
-      const labelmapBuffer = new Uint16Array(overallSize)
-
-      const module = cornerstoneTools.getModule('segmentation');
-
-      //get the total label maps and add a new one
-      const labelmaps3D = module.getters.labelmaps3D(element).labelmaps3D;
-
-      let labelmapIndex = 0;
-      if (typeof labelmaps3D !== 'undefined') {
-        labelmapIndex = module.getters.labelmaps3D(element).labelmaps3D.length;
+    //get the largest series number in this study
+    for (const s of studies[0].series) {
+      if (s.SeriesNumber >= newSeriesNumber) {
+        newSeriesNumber = +s.SeriesNumber + 1
       }
+    }
 
-      const segMetadata = {
-        data: [],
-        seriesInstanceUid: cornerstone.metaData.get('SeriesInstanceUID', firstImageId)
-      }
-      const segmentsOnFrame = 1;
-
-      let colorLUTIndex = 0;
-      for (let i = 0; i < module.state.colorLutTables.length; i++) {
-        if (!module.state.colorLutTables[i]) {
-          colorLUTIndex = i;
-          break;
+    //if there are labelmaps3D set the newSegSeriesNumber & newSeriesNumber +1 of existing
+    if (labelmaps3D) {
+      //check also the series number from the labelMaps3D (they may have segmentations not saved yet and so not present in studies.series)
+      for (const labelMap3D of labelmaps3D) {
+        if (labelMap3D.metadata.seriesNumber >= newSeriesNumber) {
+          newSeriesNumber = +labelMap3D.metadata.seriesNumber + 1
         }
       }
 
-      module.setters.labelmap3DByFirstImageId(
-        firstImageId,
-        labelmapBuffer.buffer,
-        labelmapIndex,
-        segMetadata,
-        imageIds.length,
-        segmentsOnFrame,
-        colorLUTIndex
-      );
+      newSegSeriesNumber = +labelmaps3D.length + 1
+    }
 
-      module.setters.activeLabelmapIndex(element, labelmapIndex)
-      updateState('brushStackState', module.state.series[firstImageId]);
-      updateState('selectedSegmentation', labelmapIndex);
-    })
+    const segMetadata = {
+      data: [],
+      seriesInstanceUid: cornerstone.metaData.get('SeriesInstanceUID', firstImageId),
+      rleEncode: false,
+      SeriesDescription: `Segmetation #${newSegSeriesNumber}`,
+      SeriesNumber: newSeriesNumber,
+      ImageComments: 'RESEARCH',
+      Manufacturer: "Cliniti",
+      PatientName: referencedStudy.PatientName
+    }
+    const segmentsOnFrame = 1;
+
+    let colorLUTIndex = 0;
+    for (let i = 0; i < module.state.colorLutTables.length; i++) {
+      if (!module.state.colorLutTables[i]) {
+        colorLUTIndex = i;
+        break;
+      }
+    }
+
+    module.setters.labelmap3DByFirstImageId(
+      firstImageId,
+      labelmapBuffer.buffer,
+      labelmapIndex,
+      segMetadata,
+      imageIds.length,
+      segmentsOnFrame,
+      colorLUTIndex
+    );
+
+    module.setters.activeLabelmapIndex(element, labelmapIndex)
+    updateState('brushStackState', module.state.series[firstImageId]);
+    updateState('selectedSegmentation', labelmapIndex);
+
   };
+
+
+
+
+
+
+
+
+
   //add segment to
   const addSegment = (state) => {
     const enabledElements = cornerstone.getEnabledElements()
@@ -849,9 +909,7 @@ const SegmentationPanel = ({
 
     const enabledElements = cornerstone.getEnabledElements()
     const element = enabledElements[activeIndex].element
-
-    const globalToolStateManager =
-      cornerstoneTools.globalImageIdSpecificToolStateManager;
+    const globalToolStateManager = cornerstoneTools.globalImageIdSpecificToolStateManager;
     const toolState = globalToolStateManager.saveToolState();
 
     const stackToolState = cornerstoneTools.getToolState(element, "stack");
@@ -859,73 +917,81 @@ const SegmentationPanel = ({
 
     const { getters } = cornerstoneTools.getModule('segmentation');
 
-    const activeLabelMapIndex = getters.activeLabelmapIndex(element);
-    const labelmap3D = getters.labelmap3D(element, activeLabelMapIndex);
+    const activeLabelMapIndex = getters.activeLabelmapIndex(element); //will get the active segmentation for an elment
 
-    if (!labelmap3D) {
-      console.log('no labelmap3D')
+    //const labelmap3D = getters.labelmap3D(element, activeLabelMapIndex);
+    const labelmaps3D = getters.labelmaps3D(element).labelmaps3D;
+
+    if (!labelmaps3D.length) {
+      console.log('no labelmaps3D')
       return null;
-    }
-
-    //save some data to tag fields by passing acepted fields by DCMJS (check DerivedDataset line 5434 of dcmjModified.js)
-    let options = {
-      SeriesDescription: labelmap3D.metadata.SeriesDescription,
-      SeriesNumber: +activeLabelMapIndex + 1,
-      ImageComments: 'RESEARCH',
-      Manufacturer: "Dr. Who",//use username from clinity exposed in window
-    }
-
-    let correctedLabelMap;
-    //correct nested metadata in labelmaps3D (required metadata is actually inside data prop in metadata)
-    if (labelmap3D.metadata.data) {
-      correctedLabelMap = { ...labelmap3D, metadata: labelmap3D.metadata.data };
-    } else {
-      correctedLabelMap = { ...labelmap3D }
     }
 
     let correctedLabelMaps3d = [];
 
-    //this step is unecessary once all labelMap2d's are properly set with metadata
-    // correctedLabelMap.labelmaps2D.forEach(labelMap2d => {
+    for (const labelmap3D of labelmaps3D) {
 
-    //   labelMap2d.segmentsOnLabelmap.forEach(segIndex => {
+      let correctedLabelMap;
+      //correct nested metadata in labelmaps3D (required metadata is actually inside data prop in metadata)
+      if (labelmap3D.metadata.data) {
+        correctedLabelMap = { ...labelmap3D, metadata: labelmap3D.metadata.data };
+      } else {
+        correctedLabelMap = { ...labelmap3D }
+      }
 
-    //     //mock metadata for segments with no metadata specified (required by dcmjs)
-    //     if (segIndex !== 0 && !correctedLabelMap.metadata[segIndex]) {
+      correctedLabelMaps3d.push(correctedLabelMap)
+    }
+    //console.log(correctedLabelMaps3d); return;
+    //get the next available series number
+    let seriesNumber = 1,
+      segSeriesNumber = 1
 
-    //       correctedLabelMap.metadata[segIndex] = {
-    //         RecommendedDisplayCIELabValue: dcmjs.data.Colors.rgb2DICOMLAB([
-    //           1,
-    //           0,
-    //           0
-    //         ]),
-    //         SegmentedPropertyCategoryCodeSequence: {
-    //           CodeValue: "T-D0050",
-    //           CodingSchemeDesignator: "SRT",
-    //           CodeMeaning: "Tissue"
-    //         },
-    //         SegmentNumber: segIndex.toString(), //the index of the segment in labelmap3d (needs to be in sequence 1, 2, 3, ...)
-    //         SegmentLabel: "Tissue " + segIndex.toString(), // can be user defined or equal to CodeMeaning in SegmentedPropertyTypeCodeSequence
-    //         SegmentAlgorithmType: "SEMIAUTOMATIC", //MANUAL, SEMIAUTOMATIC, AUTOMATIC
-    //         SegmentAlgorithmName: "Slicer Prototype", //name required if algorithmtype != manual
-    //         SegmentedPropertyTypeCodeSequence: {
-    //           CodeValue: "T-D0050",
-    //           CodingSchemeDesignator: "SRT",
-    //           CodeMeaning: "Tissue"
-    //         },
-    //         SegmentedPropertyTypeModifierCodeSequence: {
-    //           CodeValue: "T-D0050",
-    //           CodingSchemeDesignator: "SRT",
-    //           CodeMeaning: "Tissue"
-    //         }
-    //       }
+    for (const s of studies[0].series) {
+      if (s.Modality === 'SEG') {
+        segSeriesNumber++
+      }
+      if (s.SeriesNumber >= seriesNumber) {
+        seriesNumber = +s.SeriesNumber + 1
+      }
+    }
 
-    //     }
+    //save some data to tag fields by passing acepted fields by DCMJS (check DerivedDataset line 5434 of dcmjModified.js)
+    let options = {
+      rleEncode: false,
+      SeriesDescription: `Segmetation #${segSeriesNumber}`,
+      SeriesNumber: seriesNumber,
+      ImageComments: 'RESEARCH',
+      Manufacturer: "Cliniti",//use username from clinity exposed in window
+    }
 
-    //   })
-    // })
 
-    correctedLabelMaps3d.push(correctedLabelMap)
+    // console.log('==============================<>>>>>>>>>>>>', correctedLabelMaps3d, studies)
+    // return;
+
+    // if (!labelmap3D) {
+    //   console.log('no labelmap3D')
+    //   return null;
+    // }
+
+    // //save some data to tag fields by passing acepted fields by DCMJS (check DerivedDataset line 5434 of dcmjModified.js)
+    // let options = {
+    //   SeriesDescription: labelmap3D.metadata.SeriesDescription,
+    //   SeriesNumber: +activeLabelMapIndex + 1,
+    //   ImageComments: 'RESEARCH',
+    //   Manufacturer: "Dr. Who",//use username from clinity exposed in window
+    // }
+
+    // let correctedLabelMap;
+    // //correct nested metadata in labelmaps3D (required metadata is actually inside data prop in metadata)
+    // if (labelmap3D.metadata.data) {
+    //   correctedLabelMap = { ...labelmap3D, metadata: labelmap3D.metadata.data };
+    // } else {
+    //   correctedLabelMap = { ...labelmap3D }
+    // }
+
+    // let correctedLabelMaps3d = [];
+
+    // correctedLabelMaps3d.push(correctedLabelMap)
 
     const isMultiframe = imageIds[0].includes("?frame")
 
@@ -936,15 +1002,16 @@ const SegmentationPanel = ({
 
     } else {
       imageIds.forEach(imageId => {
-        //let instance = cornerstone.metaData.get('instance', imageId)
-        //instance._meta = [] //array needs to be present
-        datasets.push(cornerstone.metaData.get('instance', imageId))
+        let instance = cornerstone.metaData.get('instance', imageId)
+        instance._meta = [] //array needs to be present
+        datasets.push(instance)
+        //datasets.push(cornerstone.metaData.get('instance', imageId))
       });
     }
 
     const segBlob = dcmjs.adapters.Cornerstone.Segmentation.generateSegmentationFromDatasets(
       datasets,
-      correctedLabelMaps3d,
+      correctedLabelMaps3d[activeLabelMapIndex], //if we send all segmentations they will all be collapsed into 1 (overlaping segments not working??)
       options
     );
 
@@ -1054,7 +1121,7 @@ const SegmentationPanel = ({
 
     dialogFunction('Segmentation Title', 'Series Description', currentValue, (newValue) => {
       const enabledElements = cornerstone.getEnabledElements()
-      const element = enabledElements[activeIndex].element //activeIndex instead of 0 ??
+      const element = enabledElements[activeIndex].element
       const module = cornerstoneTools.getModule('segmentation');
       const activeLabelmapIndex = module.getters.activeLabelmapIndex(element);
 
@@ -1062,6 +1129,7 @@ const SegmentationPanel = ({
         return;
       }
       const activeLabelmap = module.getters.labelmap3D(element, activeLabelmapIndex)
+      activeLabelmap.SeriesDescription = newValue;
       activeLabelmap.metadata.SeriesDescription = newValue;
 
       //state.brushStackState.labelmaps3D[activeLabelmapIndex].metadata.SeriesDescription = 'modifie';

@@ -11,6 +11,8 @@ import { SimpleDialog } from '@ohif/ui';
 import RelabelSegmentModal from './components/RelabelSegmentModal/RelabelSegmentModal.js';
 import { SimpleConfirmDialog } from './components/SimpleConfirmDialog/SimpleConfirmDialog.js';
 
+
+
 const { studyMetadataManager } = OHIF.utils;
 
 export default {
@@ -27,7 +29,7 @@ export default {
    * @param {object|array} [configuration.csToolsConfig] - Passed directly to `initCornerstoneTools`
    */
   preRegistration({ servicesManager, configuration = {} }) {
-    console.log('popopopo', configuration)
+
     init({ servicesManager, configuration });
   },
   getToolbarModule({ servicesManager }) {
@@ -39,7 +41,7 @@ export default {
   },
   getPanelModule({ commandsManager, api, servicesManager }) {
     const { UINotificationService, UIModalService, UIDialogService } = servicesManager.services;
-
+    console.log('popopopo', api)
     const callInputDialog = (title, label, currentValue, callback) => {
       if (UIDialogService) {
         let dialogId = UIDialogService.create({
@@ -117,29 +119,19 @@ export default {
 
 
 
-
-    document.addEventListener('extensiondicomsegmentationsegloaded', event => {
-      console.log('Segmentation extension loaded successfully');
-      // if (UINotificationService) {
-      //   UINotificationService.show({
-      //     title: 'Segmentation Extension',
-      //     message: 'Extension loaded successfully',
-      //     duration: 2000,
-      //     position: 'bottomCenter',//topLeft | topCenter | topRight | bottomLeft | bottomCenter | bottomRight
-      //     type: 'info', //info | error | warning | success
-      //     autoClose: true,
-      //   });
-      // }
+    document.addEventListener('extensiondicomsegmentationsegselected', event => {
+      const { activatedLabelmapIndex } = event.detail
+      console.log('Segmentation selected #', activatedLabelmapIndex);
     });
 
 
-    window.MeasurementService = servicesManager.services.MeasurementService
+
 
     const ExtendedSegmentationPanel = props => {
       const { activeContexts } = api.hooks.useAppContext();
 
       const onDisplaySetLoadFailureHandler = error => {
-        console.log('---->----->----> ', error)
+
         UINotificationService.show({
           title: 'DICOM Segmentation Loader',
           message: error.message,
@@ -155,7 +147,7 @@ export default {
         const module = cornerstoneTools.getModule('segmentation');
         const activeLabelmapIndex = module.getters.labelmaps3D(element).activeLabelmapIndex
         const labelmap3D = module.getters.labelmaps3D(element).labelmaps3D[activeLabelmapIndex];
-        console.log(labelmap3D.activeSegmentIndex)
+
 
         commandsManager.runCommand('jumpToImage', data);
         commandsManager.runCommand('jumpToSlice', data);
@@ -215,8 +207,18 @@ export default {
       document.dispatchEvent(event);
     };
 
+
+
     const onSegmentationsLoaded = ({ detail }) => {
-      const { segDisplaySet, segMetadata } = detail;
+      const {
+        imageIds,
+        labelmapBuffer,
+        labelmapSegments,
+        segDisplaySet,
+        segMetadata,
+        segmentsOnFrame
+      } = detail
+
       const studyMetadata = studyMetadataManager.get(
         segDisplaySet.StudyInstanceUID
       );
@@ -228,7 +230,21 @@ export default {
         badgeNumber: referencedDisplaysets.length,
         target: 'segmentation-panel',
       });
+
+      if (UINotificationService) {
+        UINotificationService.show({
+          title: 'Segmentation loaded successfully',
+          message: `${segmentsOnFrame.length} segment${segmentsOnFrame.length > 1 ? 's' : ''} loaded`,
+          duration: 2000,
+          position: 'bottomCenter',//topLeft | topCenter | topRight | bottomLeft | bottomCenter | bottomRight
+          type: 'info', //info | error | warning | success
+          autoClose: true,
+        });
+      }
     };
+
+
+
 
     document.addEventListener(
       'extensiondicomsegmentationsegloaded',

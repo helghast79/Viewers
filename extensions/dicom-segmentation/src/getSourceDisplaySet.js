@@ -1,15 +1,33 @@
 import setActiveLabelmap from './utils/setActiveLabelMap';
 import { classes } from '@ohif/core';
+import { metadata } from '@ohif/core';
 
 const { ImageSet } = classes;
 
-export default function getSourceDisplaySet(studies, segDisplaySet) {
-  const referencedDisplaySet = _getReferencedDisplaySet(segDisplaySet, studies);
+// export default function getSourceDisplaySet(studies, segDisplaySet) {
+//   const referencedDisplaySet = _getReferencedDisplaySet(segDisplaySet, studies);
 
-  setActiveLabelmap(referencedDisplaySet, studies, segDisplaySet);
+//   setActiveLabelmap(referencedDisplaySet, studies, segDisplaySet);
 
-  return referencedDisplaySet;
+//   return referencedDisplaySet;
+// }
+export default function getSourceDisplaySet(studies, segDisplaySet, activateLabelMap = true, onDisplaySetLoadFailureHandler) {
+  const referencedDisplaySet = metadata.StudyMetadata.getReferencedDisplaySet(segDisplaySet, studies);
+
+  let activatedLabelmapPromise;
+  if (activateLabelMap) {
+    activatedLabelmapPromise = setActiveLabelmap(referencedDisplaySet, studies, segDisplaySet, undefined, onDisplaySetLoadFailureHandler);
+  }
+
+  return {
+    referencedDisplaySet: referencedDisplaySet,
+    activatedLabelmapPromise: activatedLabelmapPromise
+  }
 }
+
+
+
+
 
 const _getReferencedDisplaySet = (segDisplaySet, studies) => {
   let allDisplaySets = [];
