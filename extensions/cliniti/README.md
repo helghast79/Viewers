@@ -9,7 +9,7 @@ allowing control over visibility of a given segment and providing metadata about
 
 #### Index
 
-Extension Id: `com.ohif.dicom-segmentation`
+Extension Id: `com.cliniti`
 
 ## Tool Configuration
 

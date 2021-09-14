@@ -1,10 +1,10 @@
 {
-  "name": "@ohif/extension-dicom-segmentation",
-  "version": "0.6.11",
-  "description": "OHIF extension for viewing segmentations in the 2D MPR view",
-  "author": "OHIF",
+  "name": "@ohif/extension-cliniti",
+  "version": "0.1.00",
+  "description": "Connect to cliniti web application and manage resources and AI",
+  "author": "Miguel Chambel",
   "license": "MIT",
-  "repository": "OHIF/Viewers",
+  "repository": "helgahst79/Viewers",
   "main": "dist/index.umd.js",
   "module": "src/index.js",
   "engines": {

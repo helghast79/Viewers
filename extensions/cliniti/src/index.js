@@ -19,7 +19,7 @@ export default {
   /**
    * Only required property. Should be a unique value across all extensions.
    */
-  id: 'com.ohif.dicom-segmentation',
+  id: 'com.cliniti',
   version,
 
   /**
@@ -127,7 +127,7 @@ export default {
 
 
 
-    const ExtendedSegmentationPanel = props => {
+    const ExtendedClinitiPanel = props => {
       const { activeContexts } = api.hooks.useAppContext();
 
       const onDisplaySetLoadFailureHandler = error => {
@@ -190,7 +190,7 @@ export default {
       );
     };
 
-    const SegmentationPanelTabUpdatedEvent = 'segmentation-panel-tab-updated';
+    const ClinitiPanelTabUpdatedEvent = 'cliniti-panel-tab-updated';
 
     /**
      * Trigger's an event to update the state of the panel's RoundedButtonGroup.
@@ -200,8 +200,8 @@ export default {
      *
      * @param {object} data
      */
-    const triggerSegmentationPanelTabUpdatedEvent = data => {
-      const event = new CustomEvent(SegmentationPanelTabUpdatedEvent, {
+    const triggerClinitiPanelTabUpdatedEvent = data => {
+      const event = new CustomEvent(ClinitiPanelTabUpdatedEvent, {
         detail: data,
       });
       document.dispatchEvent(event);
@@ -226,9 +226,9 @@ export default {
         referencedSeriesInstanceUID: segMetadata.seriesInstanceUid,
         Modality: 'SEG',
       });
-      triggerSegmentationPanelTabUpdatedEvent({
+      triggerClinitiPanelTabUpdatedEvent({
         badgeNumber: referencedDisplaysets.length,
-        target: 'segmentation-panel',
+        target: 'cliniti-panel',
       });
 
       if (UINotificationService) {
@@ -255,9 +255,9 @@ export default {
       menuOptions: [
         {
           icon: 'list',
-          label: 'Segmentations',
-          target: 'segmentation-panel',
-          stateEvent: SegmentationPanelTabUpdatedEvent,
+          label: 'Cliniti',
+          target: 'cliniti-panel',
+          stateEvent: ClinitiPanelTabUpdatedEvent,
           isDisabled: false /* studies => {
             if (!studies) {
               return true;
@@ -283,8 +283,8 @@ export default {
       ],
       components: [
         {
-          id: 'segmentation-panel',
-          component: ExtendedSegmentationPanel,
+          id: 'cliniti-panel',
+          component: ExtendedClinitiPanel,
         },
       ],
       defaultContext: ['VIEWER'],

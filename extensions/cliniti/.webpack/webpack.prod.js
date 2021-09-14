@@ -1,8 +1,8 @@
 const webpack = require('webpack');
 const merge = require('webpack-merge');
 const path = require('path');
-const webpackCommon = require('./../../../.webpack/webpack.commonjs.js');
-const pkg = require('./../package.json');
+const webpackCommon = require('../../../.webpack/webpack.commonjs.js');
+const pkg = require('../package.json');
 
 const ROOT_DIR = path.join(__dirname, './..');
 const SRC_DIR = path.join(__dirname, '../src');
@@ -19,7 +19,7 @@ module.exports = (env, argv) => {
     },
     output: {
       path: ROOT_DIR,
-      library: 'OHIFExtDicomSeg',
+      library: 'ClinitiExt',
       libraryTarget: 'umd',
       libraryExport: 'default',
       filename: pkg.main,

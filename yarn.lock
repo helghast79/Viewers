@@ -2715,6 +2715,16 @@
   dependencies:
     "@types/node" "^12.11.1"
 
+"@ohif/extension-dicom-segmentation@^0.6.11":
+  version "0.6.11"
+  resolved "https://registry.yarnpkg.com/@ohif/extension-dicom-segmentation/-/extension-dicom-segmentation-0.6.11.tgz#1d6a3100802a39b544c8717d6d08aa69f4644a3a"
+  integrity sha512-cQVrLMpVfKJyUeAY05vZVG+5J/4MCYl8AvC5RyRJ1VC4FQU9NeU9OJ38M+1FdRcfb65dc8RLMSb6t5gNKxzjuQ==
+  dependencies:
+    "@babel/runtime" "^7.5.5"
+    gl-matrix "^3.3.0"
+    react-select "^3.0.8"
+    react-tooltip "4.2.10"
+
 "@ohif/i18n@^0.2.3":
   version "0.2.5"
   resolved "https://registry.yarnpkg.com/@ohif/i18n/-/i18n-0.2.5.tgz#2b92a78109823ce0f50dd590201d980a5fd64974"
