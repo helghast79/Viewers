@@ -112,3 +112,40 @@
 .DraggableArea .Overlay{
   background: rgba(0,0,0,0.7)!important;
 }
+.segmentation-select-input{
+  margin-left: 38px;
+}
+.segmentation-select-add-button{
+  float: left;
+  height: 50px;
+  border: 1px solid #9bcef9;
+  border-radius: 5px;
+  cursor:pointer;
+}
+.segmentation-select-add-button:hover .button-icon{
+ color:white;
+}
+.segmentation-select-add-button .button-icon{
+  margin: 12px 4px;
+  width: 20px;
+  height: 20px;
+}
+.custom-dropdown{
+  margin-left: 10px;
+}
+.custom-dropdown.segmentation-file-dropdown .dd-menu-list{
+  width: 270px;
+}
+.dropdown-custom-icon{
+  margin-right:-3px;
+}
+.dropdown-custom-icon svg{
+  margin-top: 5px;
+}
+.custom-dropdown .dd-caret-down, .custom-dropdown .dd-caret-up{
+  margin-bottom: 4px;
+}
+
+.dropdown-custom-title{
+  margin-right:0px;
+}

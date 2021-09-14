@@ -1,7 +1,9 @@
 import React from 'react';
 import Select from 'react-select';
 
+
 const SegmentationSelect = ({ value, formatOptionLabel, options }) => (
+
   <Select
     value={value}
     formatOptionLabel={formatOptionLabel}

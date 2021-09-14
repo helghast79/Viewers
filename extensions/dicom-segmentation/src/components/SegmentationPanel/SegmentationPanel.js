@@ -4,7 +4,8 @@ import cornerstoneTools from 'cornerstone-tools';
 import cornerstone from 'cornerstone-core';
 import moment from 'moment';
 import { utils, log } from '@ohif/core';
-import { ScrollableArea, TableList, Icon, SimpleDialog } from '@ohif/ui';
+import { ScrollableArea, TableList, Icon, SimpleDialog, Dropdown } from '@ohif/ui';
+import ReactTooltip from 'react-tooltip';
 import DICOMSegTempCrosshairsTool from '../../tools/DICOMSegTempCrosshairsTool';
 
 
@@ -1117,6 +1118,10 @@ const SegmentationPanel = ({
       console.warn("couldn't find current label map. Aborting...");
       return;
     }
+    const activeLabelmapIndex = state.brushStackState.activeLabelmapIndex
+    const labelmap3D = state.brushStackState.labelmaps3D[activeLabelmapIndex];
+
+    console.log('---->', currentLabelMap, labelmap3D)
     const currentValue = currentLabelMap.title;
 
     dialogFunction('Segmentation Title', 'Series Description', currentValue, (newValue) => {
@@ -1137,6 +1142,52 @@ const SegmentationPanel = ({
       return;
     })
   }
+
+
+
+  const renderCustomDropdownTitle = (iconName, title) => {
+
+    return (
+      <React.Fragment>
+        <span className="dropdown-custom-icon">
+          <Icon
+            className={`${iconName}-icon button-icon`}
+            name={iconName}
+            width="17px"
+            height="17px"
+          />
+        </span>
+        {/* <span className="dropdown-custom-title">
+          {title}
+        </span>
+        <span className="dd-caret-down" />*/}
+
+      </React.Fragment>
+    );
+  };
+
+
+  const dropdownSegmentationFileOptions = () => {
+    return [
+      {
+        title: 'Download segmentation',
+        // icon: {
+        //   name: 'edit',
+        // },
+        onClick: downloadSegmentation
+      },
+      {
+        title: 'Upload segmentation to pacs',
+        onClick: uploadSegmentation
+      },
+      {
+        title: 'Delete segmentation from pacs',
+        // onClick: uploadSegmentation()
+      },
+    ]
+  }
+
+
 
 
 
@@ -1183,14 +1234,6 @@ const SegmentationPanel = ({
             </form>
           )}
           <h3>Segmentations
-            <Icon
-              className="plus-icon button-icon"
-              name="plus"
-              width="20px"
-              height="20px"
-              onClick={() => addSegmentation(state)}
-            />
-
           </h3>
           <Icon
             className="cog-icon button-icon"
@@ -1201,13 +1244,39 @@ const SegmentationPanel = ({
           />
         </div>
         <div className="segmentations">
-          <SegmentationSelect
-            value={state.labelmapList.find(
-              i => i.value === state.selectedSegmentation
-            )}
-            formatOptionLabel={SegmentationItem}
-            options={state.labelmapList}
-          />
+
+          <div
+            className="segmentation-select-add-button"
+            data-tip
+            data-for="new-segmentation-button"
+            onClick={() => addSegmentation(state)}
+          >
+            <Icon
+              className="plus-icon button-icon"
+              name="plus"
+              width="20px"
+              height="20px"
+
+            />
+            <ReactTooltip
+              id="new-segmentation-button"
+              delayShow={250}
+              place="top"
+              border={true}
+              type="light"
+            >
+              <span>Add new segmentation</span>
+            </ReactTooltip>
+          </div>
+          <div className="segmentation-select-input">
+            <SegmentationSelect
+              value={state.labelmapList.find(
+                i => i.value === state.selectedSegmentation
+              )}
+              formatOptionLabel={SegmentationItem}
+              options={state.labelmapList}
+            />
+          </div>
         </div>
         {state.brushStackState && state.brushStackState.activeLabelmapIndex >= 0 && (
           <div className="Segmentation-control">
@@ -1219,22 +1288,13 @@ const SegmentationPanel = ({
               onClick={() => editSegmentation()}
             />
 
-            <Icon
-              className="save-regular-icon button-icon"
-              name="save"
-              width="17px"
-              height="17px"
-              onClick={() => downloadSegmentation()}
-            />
-
-            <Icon
-              className="database-icon button-icon"
-              name="database"
-              title="sdffsd"
-              width="17px"
-              height="17px"
-              onClick={() => uploadSegmentation()}
-            />
+            <div className="custom-dropdown segmentation-file-dropdown">
+              <Dropdown
+                titleElement={renderCustomDropdownTitle('bars', 'File')}
+                align="right"
+                list={dropdownSegmentationFileOptions()}
+              ></Dropdown>
+            </div>
 
           </div>
         )}
@@ -1331,6 +1391,13 @@ const _setActiveSegment = (firstImageId, segmentIndex, activeSegmentIndex) => {
 
   return segmentIndex;
 };
+
+
+
+
+
+
+
 
 
 
